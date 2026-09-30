@@ -20,7 +20,8 @@ Kein PlatformIO, kein Node.js, kein Python, keine zusätzlichen Bibliotheken.
 
 Dashboard · WLAN-Scanner (Suche, Filter, Sortierung) · Kanalübersicht als Grafik · RSSI-Verlauf einzelner Netze ·
 eigener Access Point (starten/stoppen, SSID/Passwort/Kanal, dauerhaft gespeichert) · Geräte am eigenen AP (anzeigen, sperren, entsperren) ·
-Test-WLANs · BLE-Scanner · Logs · Einstellungen · Login · Captive Portal · Systeminfos · Firmware-Update über GitHub (+ manueller .bin-Upload) · Demo-Modus.
+**Router-Modus** (Internet vom Heim-WLAN über den eigenen AP teilen) · **Gäste-Portal** (eigene Anmeldeseite mit Presets „Einfach" und „Ticket-System", Ticket-Verwaltung) ·
+Heim-WLAN verbinden wie am Handy (Liste gefundener Netze) · Test-WLANs · BLE-Scanner · Logs · Einstellungen · Login · Captive Portal · Systeminfos · Firmware-Update über GitHub (+ manueller .bin-Upload) · Demo-Modus.
 
 Bewusst **nicht** enthalten: Jamming, Deauthentication, Beacon-Flooding, Evil Twin, Credential Harvesting, Bluetooth-Störung/-Flooding oder Angriffe auf fremde Geräte. Das Projekt ist für Lernen, Diagnose, eigene Testnetze und eigene Geräte gedacht.
 
@@ -124,7 +125,33 @@ Dann liefert der ESP32 simulierte WLANs, BLE-Geräte, Clients und ein simulierte
 
 *Einstellungen → Internet (Heim-WLAN)* → **„WLANs suchen“**. Der ESP32 zeigt die gefundenen Netze mit Signalstärke, tippe eines an. Bei einem verschlüsselten Netz erscheint ein Passwortfeld, bei einem offenen nicht - genau wie am Smartphone. Versteckte WLANs (senden keinen Namen) trägst du über „Verstecktes WLAN manuell eingeben“ ein.
 
-## G. Firmware-Update über GitHub
+
+## H. Router-Modus: Internet aus einem WLAN auf ein eigenes verteilen
+
+Der ESP32 kann sich mit einem WLAN verbinden (z. B. dem Schul-WLAN, unter *Einstellungen → Internet*) und dessen Internetzugang über seinen **eigenen** Access Point weitergeben - wie ein Reise-Router. Am fremden WLAN meldet sich dabei nur der ESP32 mit einer einzigen Geräte-MAC-Adresse an; alle Geräte, die sich mit dem ESP32-WLAN verbinden, teilen sich diese eine Verbindung.
+
+**Einrichtung:** *Einstellungen → Internet (Heim-WLAN)* verbinden, dann *Einstellungen → Access Point* → Haken bei „Internet über eigenes WLAN teilen (Router-Modus)" setzen und speichern. Das Dashboard zeigt danach eine Kachel „Router-Modus: Aktiv".
+
+**Technischer Hintergrund:** Möglich wird das durch NAT/IP-Weiterleitung (NAPT), die im ESP32-Boardpaket bereits aktiviert ist (`esp_netif_napt_enable`) - es ist **keine** zusätzliche Bibliothek und kein Custom-Build nötig, das läuft mit der normalen Arduino-IDE-Installation aus Abschnitt C.
+
+**Grenzen:** Ein ESP32 ist kein vollwertiger Router - für eine ganze Schulklasse gleichzeitig ist die Bandbreite und die Anzahl möglicher Verbindungen begrenzt (siehe `AP_MAX_CLIENTS` im Code). Prüfe außerdem vorher, ob das Teilen des Schul-WLANs über ein eigenes Gerät von deiner Schule/IT-Abteilung erlaubt ist - viele Netzwerk-Richtlinien untersagen das Einbringen zusätzlicher Access Points.
+
+## I. Gäste-Portal: eigene Anmeldeseite für Geräte am Access Point
+
+Unter *Einstellungen → Gäste-Portal* lässt sich eine eigene, öffentliche Anmeldeseite aktivieren, die Geräte am ESP32-WLAN zuerst sehen, bevor sie Internetzugang bekommen (braucht aktiven Router-Modus, siehe oben). Drei Modi:
+
+* **Aus** - heutiges Verhalten, direkt zur normalen Oberfläche (kein Regressionsrisiko für den reinen Diagnose-Betrieb).
+* **Einfach** - ein Knopf „Verbinden", danach ist das Gerät angemeldet.
+* **Ticket-System** - Geräte müssen einen 6-stelligen, **einmal gültigen** Anmeldecode eingeben. Unter *Einstellungen → Gäste-Portal → Tickets* erstellst du Tickets (mit optionalem Namen/Kommentar), siehst ihren Status (frei/verwendet) und kannst sie als Textdatei herunterladen, um sie z. B. auszudrucken oder einzeln zu verschicken - das Verschicken selbst übernimmt der ESP32 nicht, das machst du wie gewohnt (WhatsApp, E-Mail, Zettel).
+
+**Admin-Zugriff bleibt immer möglich:** Auch wenn das Gäste-Portal aktiv ist, erreichst du die normale Verwaltungsoberfläche jederzeit unter `http://192.168.4.1/admin`.
+
+**Wichtiger Hinweis zum Design:** Die Anmeldeseite ist bewusst ein **eigenes, generisches Design** (blau/weiß, ohne fremde Logos). Es wird **kein** echter Anbieter nachgebaut (z. B. Bayern-WLAN oder ähnliche Dienste) - eine solche Kopie wäre eine Phishing-Falle: Nutzer könnten denken, sie seien im echten, offiziellen Netz, und dort z. B. echte Zugangsdaten eingeben. Das schließt dieses Projekt konsequent aus (siehe Abschnitt „Sicherheit" oben im Projektauftrag).
+
+**Wie die Anmeldung technisch funktioniert:** Der ESP32 betreibt einen eigenen, kleinen DNS-Server. Nicht angemeldete Geräte bekommen auf jede Anfrage die eigene IP-Adresse zurück (klassisches Captive Portal, wie schon zuvor). Angemeldete Geräte werden bei aktivem Router-Modus an den echten DNS-Server des Heim-WLANs weitergereicht und bekommen damit echten Internetzugang. Eine angemeldete Sitzung gilt 8 Stunden; unter *Einstellungen → Gäste-Portal → Gerade online* siehst du alle aktuell angemeldeten Geräte und kannst sie einzeln trennen.
+
+**Vorschau ohne ESP32:** `Vorschau/Gaeste-Portal-Vorschau.html` zeigt die Anmeldeseite mit einem vorbereiteten Test-Ticket (PIN `123456`) zum Ausprobieren.
+## J. Firmware-Update über GitHub
 
 1. In der `.ino` oben eintragen:
    ```cpp
@@ -146,11 +173,12 @@ Sicherheit und Ablauf:
 - Ohne Internet oder GitHub läuft alles andere unverändert; die Update-Prüfung meldet dann „Keine Internetverbindung – Updateprüfung nicht möglich.“
 - Alternativ: *Einstellungen → Firmware-Update → Manuell aktualisieren* lädt eine `.bin` direkt aus dem Browser hoch (nur mit Login).
 
-## H. Was geprüft wurde – und was nicht
+## K. Was geprüft wurde – und was nicht
 
 In der Entwicklungsumgebung stand **keine ESP32-Toolchain** zur Verfügung (Download-Server gesperrt). Deshalb gilt:
 
 - ✅ Firmware-Quelltext gegen die **echten Header des ESP32-Cores 3.3.12 / ESP-IDF 5.5** gelesen, Signaturen abgeglichen, mit `g++ -Wall -Wextra` gegen daraus abgeleitete Stubs syntaktisch geprüft (auch mit `DEMO_MODE 1`, `UPDATE_ENABLED 0`, altem Core).
 - ✅ Reine Logik (JSON-Auswertung der GitHub-Antwort inkl. kaputter Eingaben, Versionsvergleich, SHA-256-Passwort-Hash, MAC-Format, JSON-Ausgabe, BLE-Liste, Log-Puffer) auf dem PC mit AddressSanitizer getestet.
 - ✅ Weboberfläche in Chromium (Desktop + Smartphone-Größe) gegen einen Mock-Server durchgetestet: Login, Scanner-Filter, Kanäle, RSSI, Sperren, Test-WLANs, BLE, Logs, Einstellungen, kompletter Update-Ablauf inkl. Fortschritt und Neustart.
-- ⚠️ **Nicht auf echter Hardware getestet:** Kompilierung mit der echten Toolchain, WLAN/BLE/Captive Portal, HTTPS-Download und OTA. Sollte der Compiler etwas beanstanden, schick mir die Fehlermeldung.
+- ✅ Router-Modus/Gäste-Portal: Die `esp_netif_napt_enable`/`esp_netif_set_default_netif`-Aufrufe wurden gegen den echten ESP-IDF-Quelltext (Beispiel `examples/wifi/softap_sta`) geprüft - NAPT ist in den vorkompilierten Bibliotheken des Boardpakets bereits aktiviert (`CONFIG_LWIP_IPV4_NAPT=y`), keine Zusatzbibliothek nötig. Das selbstgebaute DNS-Antwortpaket (Redirect zur Anmeldeseite) wurde per Host-Test byteweise geprüft. Ticket-Erstellung/-Einlösung/-Persistenz und die Gäste-Freigabeliste wurden ebenfalls per Host-Test geprüft. Das komplette Zusammenspiel (Router-Modus einschalten, Ticket erstellen, auf der Gasteseite einlösen, Gast in der Liste sehen und trennen) wurde Ende-zu-Ende gegen einen Mock-Server durchgespielt.
+- ⚠️ **Nicht auf echter Hardware getestet:** Kompilierung mit der echten Toolchain, WLAN/BLE/Captive Portal, HTTPS-Download, OTA, und insbesondere der tatsächliche Datendurchsatz/die Stabilität des Router-Modus unter mehreren gleichzeitigen Geräten. Sollte der Compiler etwas beanstanden, schick mir die Fehlermeldung.

@@ -177,7 +177,8 @@ pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-r
   const S = { auth: true, user: 'admin', pass: 'admin123', pwDefault: true, notice: '', t0: Date.now(),
     ap: true, apSsid: 'ESP32-NetworkTool', apCh: 6, scan: 'idle', nets: [], scanAt: 0, trackMode: false, ble: 'ready', bleDevs: [], bleEnd: 0,
     blocked: ['3C:22:FB:9A:BC:DE'], logs: [], test: { active: false, idx: 0, count: 0, interval: 30, names: [] }, trackRssi: -55,
-    sta: { state: 'idle', ssid: '', ip: '', rssi: 0 }, upd: { checked: false, available: false, phase: 'idle', pct: 0, msg: '', busy: false, latest: '', notes: '', date: '' }, updT: 0 };
+    sta: { state: 'idle', ssid: '', ip: '', rssi: 0 }, upd: { checked: false, available: false, phase: 'idle', pct: 0, msg: '', busy: false, latest: '', notes: '', date: '' }, updT: 0,
+    routerMode: false, portalMode: 0, portalTitle: 'Willkommen im WLAN', tickets: [], guests: [] };
   try { if (sessionStorage.getItem('vorschauUpdated')) { S.notice = 'Update erfolgreich auf v1.0.1 aktualisiert'; sessionStorage.removeItem('vorschauUpdated'); S.pwDefault = false; } } catch (e) {}
   const up = () => Math.floor((Date.now() - S.t0) / 1000) + 100;
   const log = (l, m) => S.logs.push({ t: up(), l, m });
@@ -188,7 +189,7 @@ pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-r
   const status = () => ({ fw: '1.0.0', board: 'ESP32-S3 N16R8', up: up(), demo: true, auth: S.auth, notice: S.notice,
     chip: { model: 'ESP32-S3', rev: 2, cores: 2, mhz: 240, mac: 'AA:BB:CC:DD:EE:FF', sdk: 'v5.5.1', core: '3.3.12', temp: 41.3 },
     mem: { heap: 340000, free: 210000 - (S.ble === 'scanning' ? 30000 : 0), minFree: 190000, psram: 8388608, psramFree: 8100000, flash: 16777216, sketch: 1310720, sketchFree: 3145728 },
-    wifi: { ap: S.ap, ssid: S.test.active ? S.test.names[S.test.idx] : S.apSsid, ch: S.apCh, ip: '192.168.4.1', clients: 1, test: S.test.active, found: S.nets.length, scanning: S.scan === 'running' && !S.trackMode, sta: S.sta },
+    wifi: { ap: S.ap, ssid: S.test.active ? S.test.names[S.test.idx] : S.apSsid, ch: S.apCh, ip: '192.168.4.1', clients: 1, test: S.test.active, found: S.nets.length, scanning: S.scan === 'running' && !S.trackMode, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, guestsOnline: S.guests.length, sta: S.sta },
     ble: { state: S.ble, found: S.bleDevs.length }, warn: { defaultWeb: S.pwDefault, defaultAp: true } });
   function tick() {
     const now = Date.now();
@@ -204,6 +205,11 @@ pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-r
     tick();
     if (p === '/api/public') return R(200, { name: 'ESP32 Network Toolbox', fw: '1.0.0', auth: S.auth, demo: true });
     if (p === '/api/login') { if (a.get('user') === S.user && a.get('pass') === S.pass) return R(200, { ok: true, token: TOK }); return R(401, { ok: false, error: 'Benutzername oder Passwort falsch' }); }
+    // Gaeste-Portal: oeffentlich, kein Login noetig (eigenes Geraet = feste Vorschau-IP)
+    if (p === '/api/guest/info') return R(200, { mode: S.portalMode, title: S.portalTitle, online: S.guests.some(g => g.ip === '10.0.0.9'), internet: S.routerMode && S.sta.state === 'connected' });
+    if (p === '/api/guest/accept') { if (S.portalMode !== 1) return R(400, { ok: false, error: 'Dieses Preset ist nicht aktiv' }); S.guests.push({ ip: '10.0.0.9', via: 'einfach', remain: 28800 }); log(0, 'Gast angemeldet (Einfach)'); return R(200, { ok: true }); }
+    if (p === '/api/guest/redeem') { const pin = a.get('pin'), t = S.tickets.find(x => x.pin === pin); if (!t) return R(404, { ok: false, error: 'Unbekannte PIN' }); if (t.used) return R(409, { ok: false, error: 'Diese PIN wurde bereits verwendet' }); t.used = true; t.usedAt = up(); S.guests.push({ ip: '10.0.0.9', via: pin, remain: 28800 }); log(0, 'Ticket eingelöst: ' + pin); return R(200, { ok: true }); }
+    if (p === '/api/guest/logout') { S.guests = S.guests.filter(g => g.ip !== '10.0.0.9'); return R(200, { ok: true }); }
     if (S.auth && token !== TOK) return R(401, { ok: false, error: 'Nicht angemeldet' });
     const ok = m => R(200, m ? { ok: true, msg: m } : { ok: true });
     switch (p) {
@@ -217,7 +223,7 @@ pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-r
       case '/api/ap': return R(200, { running: S.ap, ssid: S.apSsid, cfgSsid: S.apSsid, ch: S.apCh, cfgCh: S.apCh, ip: '192.168.4.1', mac: 'AA:BB:CC:DD:EE:F1', clients: 2, test: { active: S.test.active, idx: S.test.idx, count: S.test.count, interval: S.test.interval, left: 1700, nextIn: 12, names: S.test.names } });
       case '/api/ap/start': S.ap = true; S.test.active = false; log(0, 'Access Point gestartet'); return ok();
       case '/api/ap/stop': S.ap = false; log(1, 'Access Point gestoppt'); return ok('Gestoppt (Vorschau)');
-      case '/api/ap/save': S.apSsid = a.get('ssid'); S.apCh = +a.get('ch'); log(0, 'Einstellungen gespeichert (Access Point)'); return ok('Gespeichert.');
+      case '/api/ap/save': S.apSsid = a.get('ssid'); S.apCh = +a.get('ch'); if (a.has('router')) S.routerMode = a.get('router') === '1'; log(0, 'Einstellungen gespeichert (Access Point)'); return ok('Gespeichert.');
       case '/api/ap/clients': return R(200, { clients: [{ mac: 'A4:83:E7:12:34:56', ip: '192.168.4.2', rssi: -48, connected: true, blocked: S.blocked.includes('A4:83:E7:12:34:56'), status: S.blocked.includes('A4:83:E7:12:34:56') ? 'gesperrt' : 'verbunden' }, ...S.blocked.filter(m => m !== 'A4:83:E7:12:34:56').map(m => ({ mac: m, ip: '-', rssi: 0, connected: false, blocked: true, status: 'gesperrt' }))] });
       case '/api/ap/block': S.blocked.push(a.get('mac')); log(0, 'Gerät gesperrt: ' + a.get('mac')); return ok();
       case '/api/ap/unblock': S.blocked = S.blocked.filter(m => m !== a.get('mac')); log(0, 'Gerät entsperrt: ' + a.get('mac')); return ok();
@@ -229,7 +235,14 @@ pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-r
       case '/api/ble/clear': S.bleDevs = []; log(0, 'BLE-Ergebnisse gelöscht'); return ok();
       case '/api/logs': return R(200, { logs: S.logs });
       case '/api/logs/clear': S.logs = []; return ok();
-      case '/api/settings': return R(200, { apSsid: S.apSsid, apCh: S.apCh, webUser: S.user, authEnabled: S.auth, staSsid: S.sta.ssid, hasStaPass: false, sta: S.sta });
+      case '/api/settings': return R(200, { apSsid: S.apSsid, apCh: S.apCh, webUser: S.user, authEnabled: S.auth, staSsid: S.sta.ssid, hasStaPass: false, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, portalTitle: S.portalTitle, sta: S.sta });
+      case '/api/portal/save': S.portalMode = +a.get('mode'); S.portalTitle = a.get('title'); log(0, 'Einstellungen gespeichert (Gäste-Portal)'); return ok('Gespeichert.');
+      case '/api/tickets': return R(200, { tickets: S.tickets, max: 40 });
+      case '/api/tickets/create': { let pin; do { pin = String(100000 + Math.floor(Math.random() * 900000)); } while (S.tickets.some(t => t.pin === pin)); S.tickets.push({ pin, used: false, note: a.get('note') || '', createdAt: up(), usedAt: 0 }); log(0, 'Ticket erstellt: ' + pin); return R(200, { ok: true, pin }); }
+      case '/api/tickets/delete': S.tickets = S.tickets.filter(t => t.pin !== a.get('pin')); return ok();
+      case '/api/tickets/download': return R(200, 'ESP32 Network Toolbox - WLAN-Tickets (Vorschau)\nWLAN: ' + S.apSsid + '\n\n' + S.tickets.map(t => 'PIN: ' + t.pin + (t.used ? '  (bereits verwendet)' : '  (frei)') + (t.note ? '  - ' + t.note : '')).join('\n'));
+      case '/api/guests': return R(200, { guests: S.guests });
+      case '/api/guests/revoke': S.guests = S.guests.filter(g => g.ip !== a.get('ip')); log(0, 'Gast getrennt: ' + a.get('ip')); return ok();
       case '/api/settings/web': if (S.auth && a.get('oldpass') !== S.pass) return R(403, { ok: false, error: 'Aktuelles Passwort ist falsch' }); if (a.get('newpass')) { S.pass = a.get('newpass'); S.pwDefault = false; } S.user = a.get('user'); S.auth = a.get('auth') === '1'; return ok('Gespeichert.');
       case '/api/sta/connect': S.sta = { state: 'connected', ssid: a.get('ssid'), ip: '192.168.178.44', rssi: -52 }; return ok();
       case '/api/sta/disconnect': S.sta = { state: 'idle', ssid: '', ip: '', rssi: 0 }; return ok();
@@ -427,6 +440,8 @@ function paintDash() {
     statCard('users', 'Geräte am AP', w.clients, 'verbunden mit eigenem WLAN') +
     statCard('wifi', 'Gefundene WLANs', w.found, w.scanning ? 'Scan läuft...' : 'aus letztem Scan') +
     statCard('globe', 'Internet', w.sta.state === 'connected' ? 'Online' : 'Offline', internet) +
+    (w.routerMode ? statCard('out', 'Router-Modus', w.routerActive ? '<span class="dot"></span>Aktiv' : '<span class="dot off"></span>Wartet', w.routerActive ? 'Internet wird geteilt' : 'braucht verbundenes Heim-WLAN') : '') +
+    (w.portalMode ? statCard('users', 'Gäste-Portal', w.guestsOnline, (w.portalMode == 2 ? 'Ticket-System' : 'Einfach') + ' · online') : '') +
     '</div>' +
     '<div class="card"><div class="sec">' + ic('cpu') + '<h2>Systeminformationen</h2></div><div class="kv">' +
     '<div>Chip-Modell</div><div>' + esc(s.chip.model) + ' (Revision ' + esc(s.chip.rev) + ')</div>' +
@@ -692,9 +707,11 @@ VIEWS.logs = el => {
 let UP = null;
 VIEWS.settings = el => {
   el.innerHTML =
-    '<div class="sub-nav"><a data-s="s-ap">Access Point</a><a data-s="s-web">Webinterface</a><a data-s="s-sta">Internet (Heim-WLAN)</a><a data-s="s-sys">System</a><a data-s="s-upd">Firmware-Update</a></div>' +
+    '<div class="sub-nav"><a data-s="s-ap">Access Point</a><a data-s="s-web">Webinterface</a><a data-s="s-sta">Internet (Heim-WLAN)</a><a data-s="s-guest">Gäste-Portal</a><a data-s="s-sys">System</a><a data-s="s-upd">Firmware-Update</a></div>' +
     '<div class="card" id="s-ap"><div class="sec">' + ic('radio') + '<h2>Access Point</h2></div>' +
     '<label>Name des WLANs (SSID)</label><input id="apSsid" maxlength="32" style="width:100%;max-width:380px"><label>Passwort (8-63 Zeichen, leer = unverändert)</label><input id="apPass" type="password" autocomplete="new-password" maxlength="63" placeholder="unverändert" style="width:100%;max-width:380px"><label>Kanal</label><select id="apCh">' + Array.from({length: 11}, (_, i) => '<option>' + (i + 1) + '</option>').join('') + '</select>' +
+    '<label style="display:flex;gap:10px;align-items:center;color:var(--tx);font-size:15px;margin-top:16px"><input type="checkbox" id="apRouter"> Internet über eigenes WLAN teilen (Router-Modus)</label>' +
+    '<div class="hint" id="routerHint">Der ESP32 verbindet sich mit dem WLAN unter „Internet (Heim-WLAN)“ und teilt dessen Internetzugang über den eigenen Access Point - wie ein Reise-Router. Am fremden WLAN meldet sich dabei nur der ESP32 selbst an.</div>' +
     '<div class="hint">Ist der ESP32 mit einem Heim-WLAN verbunden, übernimmt der Access Point automatisch dessen Kanal.</div><div style="margin-top:14px"><button class="btn pri" id="apSave">Speichern &amp; WLAN neu starten</button></div></div>' +
     '<div class="card" id="s-web"><div class="sec">' + ic('shield') + '<h2>Webinterface</h2></div>' +
     '<label style="display:flex;gap:10px;align-items:center;color:var(--tx);font-size:15px"><input type="checkbox" id="wAuth"> Login aktivieren</label>' +
@@ -711,12 +728,23 @@ VIEWS.settings = el => {
     '<label>WLAN-Name (SSID)</label><input id="sSsidManual" maxlength="32" style="width:100%;max-width:380px"><label>Passwort</label><input id="sPassManual" type="password" autocomplete="new-password" maxlength="63" style="width:100%;max-width:380px">' +
     '<div class="bar" style="margin-top:14px"><button class="btn" id="sGoManual">Verbinden</button></div></details>' +
     '<div class="bar" style="margin-top:14px"><button class="btn dng" id="sOff">Trennen &amp; vergessen</button></div></div>' +
+    '<div class="card" id="s-guest"><div class="sec">' + ic('users') + '<h2>Gäste-Portal</h2></div>' +
+    '<div class="hint" style="margin:0 0 14px">Geräte an deinem Access Point sehen erst eine eigene Anmeldeseite, bevor sie Internet bekommen (braucht aktiven Router-Modus oben). Kein Nachbau eines echten Anbieters - eine eigene, klar erkennbare Seite.</div>' +
+    '<label>Modus</label><select id="gMode"><option value="0">Aus (heutiges Verhalten: direkt zur eigenen Oberfläche)</option><option value="1">Einfach (ein „Verbinden“-Knopf)</option><option value="2">Ticket-System (6-stelliger Anmeldecode, einmal gültig)</option></select>' +
+    '<label>Titel auf der Anmeldeseite</label><input id="gTitle" maxlength="64" style="width:100%;max-width:380px">' +
+    '<div style="margin-top:14px"><button class="btn pri" id="gSave">Speichern</button></div>' +
+    '<div id="gTicketBox" style="display:none;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)">' +
+    '<h3>Tickets</h3><div class="bar" style="margin-top:8px"><input id="tNote" placeholder="Name/Kommentar (optional)" style="flex:1 1 180px"><button class="btn pri" id="tCreate">' + ic('flask') + 'Neues Ticket</button><a class="btn" id="tDownload" href="#" target="_blank">' + ic('download') + 'Alle herunterladen</a></div>' +
+    '<div class="scroll" style="margin-top:12px"><table class="tbl"><thead><tr><th>PIN</th><th>Kommentar</th><th>Status</th><th></th></tr></thead><tbody id="tTb"></tbody></table></div></div>' +
+    '<div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--line)"><h3>Gerade online</h3><div class="scroll" style="margin-top:10px"><table class="tbl"><thead><tr><th>IP-Adresse</th><th>Angemeldet über</th><th>Verbleibend</th><th></th></tr></thead><tbody id="gTb"></tbody></table></div></div></div>' +
     '<div class="card" id="s-sys"><div class="sec">' + ic('cpu') + '<h2>System</h2></div><div class="kv" id="sysInfo"></div><div class="bar" style="margin-top:14px"><button class="btn" id="rst">' + ic('power') + 'Neustart</button><button class="btn dng" id="fac">' + ic('trash') + 'Werkseinstellungen</button></div></div>' +
     '<div class="card" id="s-upd"><div class="sec">' + ic('download') + '<h2>Firmware-Update</h2></div><div id="updBody"><div class="empty">Lade...</div></div></div>';
   $$('[data-s]', el).forEach(a => a.onclick = () => { const t = $('#' + a.dataset.s); if (t) t.scrollIntoView({behavior: 'smooth', block: 'start'}); });
 
   api('/api/settings').then(s => {
     $('#apSsid').value = s.apSsid; $('#apCh').value = s.apCh; $('#wUser').value = s.webUser; $('#wAuth').checked = s.authEnabled;
+    $('#apRouter').checked = s.routerMode; $('#gMode').value = s.portalMode; $('#gTitle').value = s.portalTitle;
+    $('#gTicketBox').style.display = s.portalMode == 2 ? '' : 'none';
     paintSta(s.sta);
   }).catch(() => {});
   let staNets = [];
@@ -751,9 +779,11 @@ VIEWS.settings = el => {
   every(sysPaint, 3000);
 
   $('#apSave').onclick = async () => {
-    const r = await act('/api/ap/save', {ssid: $('#apSsid').value, pass: $('#apPass').value, ch: $('#apCh').value});
+    const r = await act('/api/ap/save', {ssid: $('#apSsid').value, pass: $('#apPass').value, ch: $('#apCh').value, router: $('#apRouter').checked ? '1' : '0'});
     if (r) { $('#apPass').value = ''; toast('Gespeichert. WLAN startet neu - bitte neu verbinden.', 'ok'); }
   };
+  $('#gMode').addEventListener('change', () => { $('#gTicketBox').style.display = $('#gMode').value == 2 ? '' : 'none'; });
+  $('#gSave').onclick = async () => { await act('/api/portal/save', {mode: $('#gMode').value, title: $('#gTitle').value}); };
   $('#wSave').onclick = async () => {
     const r = await act('/api/settings/web', {user: $('#wUser').value, oldpass: $('#wOld').value, newpass: $('#wNew').value, auth: $('#wAuth').checked ? '1' : '0'});
     if (r) { $('#wOld').value = ''; $('#wNew').value = ''; refreshStatus().catch(() => {}); }
@@ -779,8 +809,37 @@ VIEWS.settings = el => {
     if (await act('/api/system/factory', {confirm: 'RESET'}, false)) { setToken(''); waitForDevice('Werkseinstellungen werden hergestellt...'); }
   };
   initUpdate();
+  initGuestPortal(el);
   if (pending === 'web' || pending === 'ap') { const t = $(pending === 'web' ? '#s-web' : '#s-ap'); pending = null; setTimeout(() => t && t.scrollIntoView({behavior: 'smooth', block: 'start'}), 200); }
 };
+
+// ---- Ticket-Verwaltung und Gaesteliste (Abschnitt in den Einstellungen) ----
+function initGuestPortal(el) {
+  const loadTickets = async () => {
+    const d = await api('/api/tickets');
+    $('#tTb').innerHTML = d.tickets.length ? d.tickets.map(t =>
+      '<tr><td class="mono">' + esc(t.pin) + '</td><td>' + esc(t.note) + '</td><td>' + (t.used ? '<span class="tag err">verwendet</span>' : '<span class="tag ok">frei</span>') + '</td>' +
+      '<td><button class="btn sm dng" data-p="' + esc(t.pin) + '">' + ic('trash') + '</button></td></tr>').join('')
+      : '<tr><td colspan="4" class="empty">Noch keine Tickets.</td></tr>';
+    $$('#tTb [data-p]').forEach(b => b.onclick = async () => { if (!confirm('Ticket ' + b.dataset.p + ' löschen?')) return; await act('/api/tickets/delete', {pin: b.dataset.p}, 'Gelöscht'); loadTickets().catch(() => {}); });
+    $('#tDownload').href = '/api/tickets/download?t=' + encodeURIComponent(TOKEN);
+  };
+  const loadGuests = async () => {
+    const d = await api('/api/guests');
+    $('#gTb').innerHTML = d.guests.length ? d.guests.map(g =>
+      '<tr><td class="mono">' + esc(g.ip) + '</td><td>' + esc(g.via) + '</td><td>' + Math.max(0, Math.round(g.remain / 60)) + ' Min.</td>' +
+      '<td><button class="btn sm dng" data-ip="' + esc(g.ip) + '">' + ic('out') + 'Trennen</button></td></tr>').join('')
+      : '<tr><td colspan="4" class="empty">Kein Gast angemeldet.</td></tr>';
+    $$('#gTb [data-ip]').forEach(b => b.onclick = async () => { await act('/api/guests/revoke', {ip: b.dataset.ip}, 'Getrennt'); loadGuests().catch(() => {}); });
+  };
+  $('#tCreate').onclick = async () => {
+    const r = await act('/api/tickets/create', {note: $('#tNote').value}, false);
+    if (r) { $('#tNote').value = ''; toast('Neues Ticket: ' + r.pin, 'ok'); loadTickets().catch(() => {}); }
+  };
+  loadTickets().catch(() => {});
+  loadGuests().catch(() => {});
+  every(loadGuests, 5000);
+}
 
 // ---- Firmware-Update (Abschnitt in den Einstellungen) ----
 function initUpdate() {

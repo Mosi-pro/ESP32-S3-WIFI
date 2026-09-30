@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#155ec9">
+<title>VORSCHAU – Gäste-Portal</title>
+<style>
+:root{--acc:#155ec9;--acc2:#2f7de8;--bg:#eef3fa;--card:#ffffff;--tx:#16233b;--mut:#5c6b85;--line:#dde6f3;--ok:#1f9d55;--err:#d1352c}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100vh;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{display:flex;align-items:center;justify-content:center;padding:22px 16px}
+.wrap{width:100%;max-width:420px}
+.card{background:var(--card);border-radius:20px;padding:30px 26px;box-shadow:0 10px 40px rgba(20,40,80,.12)}
+.badge{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;margin:0 auto 16px}
+.badge svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+h1{font-size:21px;text-align:center;margin:0 0 6px}
+p.sub{text-align:center;color:var(--mut);margin:0 0 22px;font-size:14.5px}
+label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:600}
+input{width:100%;padding:14px 15px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:20px;letter-spacing:.12em;text-align:center;background:#f7f9fd;color:var(--tx)}
+input:focus{outline:none;border-color:var(--acc)}
+button{width:100%;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-weight:700;font-size:16px;cursor:pointer;margin-top:16px}
+button:active{background:var(--acc2)}
+button:disabled{opacity:.55;cursor:default}
+button.ghost{background:transparent;color:var(--mut);border:1.5px solid var(--line);font-weight:600}
+.msg{margin-top:14px;padding:11px 14px;border-radius:11px;font-size:14px;text-align:center;display:none}
+.msg.err{display:block;background:#fdecec;color:var(--err)}
+.msg.ok{display:block;background:#e8f7ee;color:var(--ok)}
+.state{text-align:center}
+.state .ic{width:60px;height:60px;border-radius:50%;background:#e8f7ee;display:grid;place-items:center;margin:0 auto 14px}
+.state .ic svg{width:30px;height:30px;stroke:var(--ok);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.foot{text-align:center;color:#8a97ab;font-size:12px;margin-top:22px}
+.foot b{color:#5c6b85}
+.hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+    <div class="badge"><svg viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><path d="M12 20h.01"/></svg></div>
+    <h1 id="ti">WLAN-Anmeldung</h1>
+    <p class="sub" id="sub">Lädt…</p>
+    <div id="body"></div>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div class="foot">Betrieben mit <b>ESP32 Network Toolbox</b></div>
+</div>
+<script>
+// ===== VORSCHAU-MODUS: simuliert den ESP32 komplett im Browser (keine Hardware nötig) =====
+(function () {
+  const TOK = 't'.repeat(32);
+  const S = { auth: true, user: 'admin', pass: 'admin123', pwDefault: true, notice: '', t0: Date.now(),
+    ap: true, apSsid: 'ESP32-NetworkTool', apCh: 6, scan: 'idle', nets: [], scanAt: 0, trackMode: false, ble: 'ready', bleDevs: [], bleEnd: 0,
+    blocked: ['3C:22:FB:9A:BC:DE'], logs: [], test: { active: false, idx: 0, count: 0, interval: 30, names: [] }, trackRssi: -55,
+    sta: { state: 'connected', ssid: 'Schul-WLAN (Beispiel)', ip: '192.168.178.44', rssi: -52 }, upd: { checked: false, available: false, phase: 'idle', pct: 0, msg: '', busy: false, latest: '', notes: '', date: '' }, updT: 0,
+    routerMode: true, portalMode: 2, portalTitle: 'Klassen-WLAN', tickets: [{pin:'123456',used:false,note:'Test-Ticket',createdAt:0,usedAt:0}], guests: [] };
+  try { if (sessionStorage.getItem('vorschauUpdated')) { S.notice = 'Update erfolgreich auf v1.0.1 aktualisiert'; sessionStorage.removeItem('vorschauUpdated'); S.pwDefault = false; } } catch (e) {}
+  const up = () => Math.floor((Date.now() - S.t0) / 1000) + 100;
+  const log = (l, m) => S.logs.push({ t: up(), l, m });
+  log(0, 'System gestartet (v1.0.0)'); log(0, 'Access Point gestartet: ESP32-NetworkTool'); log(1, 'DEMO-MODUS aktiv: alle Daten sind simuliert');
+  const NETS = [['FRITZ!Box 7590 XY', -42, 1, 'WPA2/WPA3'], ['Vodafone-A1B2C3', -58, 6, 'WPA2'], ['Telekom_FON', -66, 11, 'Offen'], ['WLAN-Büro', -71, 6, 'WPA2'],
+    ['TP-Link_5F2A', -74, 3, 'WPA/WPA2'], ['Gast-Netz', -80, 1, 'WPA2'], ['Kabel-8842', -83, 11, 'WPA3'], ['Alt-WEP', -86, 9, 'WEP'], ['(versteckt)', -88, 13, 'WPA2-Enterprise'], ['Nachbar', -69, 6, 'WPA2']]
+    .map((n, i) => ({ ssid: n[0], bssid: '24:0A:C4:0' + i + ':AA:0' + i, rssi: n[1], ch: n[2], auth: n[3], hidden: n[0] === '(versteckt)' }));
+  const status = () => ({ fw: '1.0.0', board: 'ESP32-S3 N16R8', up: up(), demo: true, auth: S.auth, notice: S.notice,
+    chip: { model: 'ESP32-S3', rev: 2, cores: 2, mhz: 240, mac: 'AA:BB:CC:DD:EE:FF', sdk: 'v5.5.1', core: '3.3.12', temp: 41.3 },
+    mem: { heap: 340000, free: 210000 - (S.ble === 'scanning' ? 30000 : 0), minFree: 190000, psram: 8388608, psramFree: 8100000, flash: 16777216, sketch: 1310720, sketchFree: 3145728 },
+    wifi: { ap: S.ap, ssid: S.test.active ? S.test.names[S.test.idx] : S.apSsid, ch: S.apCh, ip: '192.168.4.1', clients: 1, test: S.test.active, found: S.nets.length, scanning: S.scan === 'running' && !S.trackMode, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, guestsOnline: S.guests.length, sta: S.sta },
+    ble: { state: S.ble, found: S.bleDevs.length }, warn: { defaultWeb: S.pwDefault, defaultAp: true } });
+  function tick() {
+    const now = Date.now();
+    if (S.scan === 'running' && now > S.scanAt) { S.scan = 'done'; if (!S.trackMode) { S.nets = NETS.map(n => ({ ...n, rssi: n.rssi - Math.round(Math.random() * 3) })); log(0, S.nets.length + ' Netzwerke gefunden'); } S.trackMode = false; }
+    if (S.ble === 'scanning') { if (now > S.bleEnd) { S.ble = 'ready'; log(0, 'BLE-Scan beendet (' + S.bleDevs.length + ' Geräte)'); } else if (S.bleDevs.length < 7 && Math.random() < .7) { const n = S.bleDevs.length; S.bleDevs.push({ addr: '5C:1B:F4:12:AA:0' + n, name: ['iPhone von Max', 'ESP32-Sensor', 'Galaxy Watch', 'Mi Band 7', '', 'Beacon-01', 'JBL Flip 5'][n], rssi: -50 - n * 5, mfr: [0x4C, 0x2E5, 0x75, 0x38F, 0x4C, -1, -1][n], mfrName: ['Apple', 'Espressif', 'Samsung', 'Xiaomi', 'Apple', '', ''][n], svc: [[], ['0x181A'], ['0x180F'], ['0x180D'], [], ['0xFEAA'], ['0x110B']][n], seen: up() }); } }
+    if (S.upd.busy) { const t = (now - S.updT) / 1000;
+      if (S.upd.phase === 'checking' && t > 1.2) { S.upd.busy = false; const u = S.upd; u.checked = true; u.internet = 1; u.github = 'Verbunden'; u.lastCheck = new Date().toLocaleString('de-DE'); u.available = true; u.latest = '1.0.1'; u.date = '03.05.2026'; u.notes = 'Neu in 1.0.1:\n- Schnellerer WLAN-Scan\n- Fehlerbehebungen (Demo-Text)'; u.phase = 'idle'; u.msg = 'Neue Version verfügbar: v1.0.1'; }
+      else if (S.upd.phase === 'downloading') { S.upd.pct = Math.min(100, Math.round(t / 6 * 100)); if (t >= 6) { S.upd.phase = 'installing'; S.upd.msg = 'Firmware wird installiert...'; S.updT = now; } }
+      else if (S.upd.phase === 'installing' && t > 1.5) { S.upd.phase = 'done'; S.upd.msg = 'Demo: Update simuliert – es wurde nichts installiert.'; S.upd.busy = false; S.upd.pct = 100; } }
+  }
+  const R = (status, body) => ({ status, body });
+  function handle(method, p, a, token) {
+    tick();
+    if (p === '/api/public') return R(200, { name: 'ESP32 Network Toolbox', fw: '1.0.0', auth: S.auth, demo: true });
+    if (p === '/api/login') { if (a.get('user') === S.user && a.get('pass') === S.pass) return R(200, { ok: true, token: TOK }); return R(401, { ok: false, error: 'Benutzername oder Passwort falsch' }); }
+    // Gaeste-Portal: oeffentlich, kein Login noetig (eigenes Geraet = feste Vorschau-IP)
+    if (p === '/api/guest/info') return R(200, { mode: S.portalMode, title: S.portalTitle, online: S.guests.some(g => g.ip === '10.0.0.9'), internet: S.routerMode && S.sta.state === 'connected' });
+    if (p === '/api/guest/accept') { if (S.portalMode !== 1) return R(400, { ok: false, error: 'Dieses Preset ist nicht aktiv' }); S.guests.push({ ip: '10.0.0.9', via: 'einfach', remain: 28800 }); log(0, 'Gast angemeldet (Einfach)'); return R(200, { ok: true }); }
+    if (p === '/api/guest/redeem') { const pin = a.get('pin'), t = S.tickets.find(x => x.pin === pin); if (!t) return R(404, { ok: false, error: 'Unbekannte PIN' }); if (t.used) return R(409, { ok: false, error: 'Diese PIN wurde bereits verwendet' }); t.used = true; t.usedAt = up(); S.guests.push({ ip: '10.0.0.9', via: pin, remain: 28800 }); log(0, 'Ticket eingelöst: ' + pin); return R(200, { ok: true }); }
+    if (p === '/api/guest/logout') { S.guests = S.guests.filter(g => g.ip !== '10.0.0.9'); return R(200, { ok: true }); }
+    if (S.auth && token !== TOK) return R(401, { ok: false, error: 'Nicht angemeldet' });
+    const ok = m => R(200, m ? { ok: true, msg: m } : { ok: true });
+    switch (p) {
+      case '/api/logout': return ok();
+      case '/api/status': return R(200, status());
+      case '/api/wifi/scan': return R(200, { state: S.scan === 'running' ? 'running' : (S.scan === 'done' ? 'done' : 'idle'), track: S.trackMode, count: S.nets.length, age: S.nets.length ? 3 : -1, nets: S.nets });
+      case '/api/wifi/scan/start': S.scan = 'running'; S.scanAt = Date.now() + 1800; S.trackMode = false; log(0, 'WLAN-Scan gestartet'); return ok();
+      case '/api/wifi/scan/stop': S.scan = S.nets.length ? 'done' : 'idle'; return ok();
+      case '/api/wifi/track': if (method === 'POST') { if (S.scan === 'running') return R(409, { ok: false, error: 'Scan läuft bereits' }); S.scan = 'running'; S.trackMode = true; S.scanAt = Date.now() + 300; S.trackRssi = -55 + Math.round(Math.random() * 12 - 6); return ok(); }
+        return R(200, { running: S.scan === 'running' && S.trackMode, found: true, rssi: S.trackRssi, seq: 1 });
+      case '/api/ap': return R(200, { running: S.ap, ssid: S.apSsid, cfgSsid: S.apSsid, ch: S.apCh, cfgCh: S.apCh, ip: '192.168.4.1', mac: 'AA:BB:CC:DD:EE:F1', clients: 2, test: { active: S.test.active, idx: S.test.idx, count: S.test.count, interval: S.test.interval, left: 1700, nextIn: 12, names: S.test.names } });
+      case '/api/ap/start': S.ap = true; S.test.active = false; log(0, 'Access Point gestartet'); return ok();
+      case '/api/ap/stop': S.ap = false; log(1, 'Access Point gestoppt'); return ok('Gestoppt (Vorschau)');
+      case '/api/ap/save': S.apSsid = a.get('ssid'); S.apCh = +a.get('ch'); if (a.has('router')) S.routerMode = a.get('router') === '1'; log(0, 'Einstellungen gespeichert (Access Point)'); return ok('Gespeichert.');
+      case '/api/ap/clients': return R(200, { clients: [{ mac: 'A4:83:E7:12:34:56', ip: '192.168.4.2', rssi: -48, connected: true, blocked: S.blocked.includes('A4:83:E7:12:34:56'), status: S.blocked.includes('A4:83:E7:12:34:56') ? 'gesperrt' : 'verbunden' }, ...S.blocked.filter(m => m !== 'A4:83:E7:12:34:56').map(m => ({ mac: m, ip: '-', rssi: 0, connected: false, blocked: true, status: 'gesperrt' }))] });
+      case '/api/ap/block': S.blocked.push(a.get('mac')); log(0, 'Gerät gesperrt: ' + a.get('mac')); return ok();
+      case '/api/ap/unblock': S.blocked = S.blocked.filter(m => m !== a.get('mac')); log(0, 'Gerät entsperrt: ' + a.get('mac')); return ok();
+      case '/api/test/start': S.test = { active: true, idx: 0, count: +a.get('count'), interval: +a.get('interval'), names: ['ESP32-Test-4821', 'ESP32-LAB-1938', 'ESP32-DEMO-7712', 'ESP32-Test-1001', 'ESP32-LAB-2002'].slice(0, +a.get('count')) }; log(0, 'Test-WLANs gestartet (' + a.get('count') + ')'); return ok();
+      case '/api/test/stop': S.test.active = false; log(0, 'Test-WLANs gestoppt'); return ok();
+      case '/api/ble': return R(200, { state: S.ble, dur: 10, left: Math.max(0, Math.round((S.bleEnd - Date.now()) / 1000)), devs: S.bleDevs, up: up() });
+      case '/api/ble/start': S.ble = 'scanning'; S.bleEnd = Date.now() + (+a.get('secs') || 10) * 1000; log(0, 'BLE-Scan gestartet'); return ok();
+      case '/api/ble/stop': S.bleEnd = 0; return ok();
+      case '/api/ble/clear': S.bleDevs = []; log(0, 'BLE-Ergebnisse gelöscht'); return ok();
+      case '/api/logs': return R(200, { logs: S.logs });
+      case '/api/logs/clear': S.logs = []; return ok();
+      case '/api/settings': return R(200, { apSsid: S.apSsid, apCh: S.apCh, webUser: S.user, authEnabled: S.auth, staSsid: S.sta.ssid, hasStaPass: false, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, portalTitle: S.portalTitle, sta: S.sta });
+      case '/api/portal/save': S.portalMode = +a.get('mode'); S.portalTitle = a.get('title'); log(0, 'Einstellungen gespeichert (Gäste-Portal)'); return ok('Gespeichert.');
+      case '/api/tickets': return R(200, { tickets: S.tickets, max: 40 });
+      case '/api/tickets/create': { let pin; do { pin = String(100000 + Math.floor(Math.random() * 900000)); } while (S.tickets.some(t => t.pin === pin)); S.tickets.push({ pin, used: false, note: a.get('note') || '', createdAt: up(), usedAt: 0 }); log(0, 'Ticket erstellt: ' + pin); return R(200, { ok: true, pin }); }
+      case '/api/tickets/delete': S.tickets = S.tickets.filter(t => t.pin !== a.get('pin')); return ok();
+      case '/api/tickets/download': return R(200, 'ESP32 Network Toolbox - WLAN-Tickets (Vorschau)\nWLAN: ' + S.apSsid + '\n\n' + S.tickets.map(t => 'PIN: ' + t.pin + (t.used ? '  (bereits verwendet)' : '  (frei)') + (t.note ? '  - ' + t.note : '')).join('\n'));
+      case '/api/guests': return R(200, { guests: S.guests });
+      case '/api/guests/revoke': S.guests = S.guests.filter(g => g.ip !== a.get('ip')); log(0, 'Gast getrennt: ' + a.get('ip')); return ok();
+      case '/api/settings/web': if (S.auth && a.get('oldpass') !== S.pass) return R(403, { ok: false, error: 'Aktuelles Passwort ist falsch' }); if (a.get('newpass')) { S.pass = a.get('newpass'); S.pwDefault = false; } S.user = a.get('user'); S.auth = a.get('auth') === '1'; return ok('Gespeichert.');
+      case '/api/sta/connect': S.sta = { state: 'connected', ssid: a.get('ssid'), ip: '192.168.178.44', rssi: -52 }; return ok();
+      case '/api/sta/disconnect': S.sta = { state: 'idle', ssid: '', ip: '', rssi: 0 }; return ok();
+      case '/api/notice/dismiss': S.notice = ''; return ok();
+      case '/api/system/restart': return ok();
+      case '/api/system/factory': return ok();
+      case '/api/update': { const u = S.upd; return R(200, { installed: '1.0.0', latest: u.checked ? u.latest : '', checked: u.checked, available: u.available, canInstall: !!(u.available && !u.busy && u.phase !== 'done'), hasSha: true, date: u.date, notes: u.notes, lastCheck: u.lastCheck || '', github: u.github || 'Noch nicht geprüft', internet: u.internet === undefined ? -1 : u.internet, staUp: S.sta.state === 'connected', phase: u.phase, pct: u.pct, msg: u.msg, busy: u.busy, configured: true, supported: true, repo: 'DEIN-NAME/ESP32-Network-Toolbox', assetPattern: 'ESP32_Network_Toolbox_vX.Y.Z.bin', requireSha: true }); }
+      case '/api/update/check': S.upd.busy = true; S.upd.phase = 'checking'; S.upd.msg = 'Suche nach Updates...'; S.updT = Date.now(); return ok();
+      case '/api/update/install': S.upd.busy = true; S.upd.phase = 'downloading'; S.upd.pct = 0; S.upd.msg = 'Firmware wird heruntergeladen...'; S.updT = Date.now(); return ok();
+    }
+    return R(404, { ok: false, error: 'Unbekannter Endpunkt' });
+  }
+  window.fetch = async (url, opt) => {
+    opt = opt || {};
+    await new Promise(r => setTimeout(r, 40));
+    const u = new URL(String(url), 'http://esp32.vorschau/');  // feste Basis: funktioniert auch in Vorschaufenstern (about:blank, data:, iframe)
+    const r = handle(opt.method || 'GET', u.pathname, new URLSearchParams(opt.body ? opt.body.toString() : ''), (opt.headers || {})['X-Token'] || u.searchParams.get('t'));
+    return new Response(JSON.stringify(r.body), { status: r.status, headers: { 'Content-Type': 'application/json' } });
+  };
+  window.XMLHttpRequest = function () { this.open = () => {}; this.setRequestHeader = () => {}; this.upload = {}; this.send = () => { alert('In der Vorschau ist kein Datei-Upload möglich.'); }; };
+})();
+</script>
+<script>
+"use strict";
+var $ = function(s){ return document.querySelector(s); };
+var esc = function(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); };
+function msg(t,type){ var m=$('#msg'); m.className='msg '+(type||''); m.textContent=t; }
+function post(path,data){
+  return fetch(path,{method:'POST',body:new URLSearchParams(data||{})}).then(function(r){
+    return r.json().then(function(j){ if(!r.ok||j.ok===false) throw new Error(j.error||'Fehler'); return j; });
+  });
+}
+function showOnline(internet){
+  $('#sub').textContent = internet ? 'Du bist verbunden.' : 'Angemeldet – warte auf Internet…';
+  $('#body').innerHTML =
+    '<div class="state"><div class="ic"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>' +
+    '<div style="color:var(--mut);font-size:14px">' + (internet ? 'Du kannst jetzt im Internet surfen.' : 'Das WLAN hat aktuell keine Internetverbindung. Bitte kurz warten.') + '</div></div>' +
+    '<button class="ghost" id="bOut" style="margin-top:20px">Abmelden</button>';
+  $('#bOut').onclick = function(){ post('/api/guest/logout',{}).then(load).catch(function(){}); };
+}
+function showSimple(title){
+  $('#ti').textContent = esc(title);
+  $('#sub').textContent = 'Klicke auf „Verbinden“, um ins WLAN zu gelangen.';
+  $('#body').innerHTML = '<button id="bGo">Verbinden</button>';
+  $('#bGo').onclick = function(){
+    $('#bGo').disabled = true; $('#bGo').textContent = 'Verbinde…';
+    post('/api/guest/accept',{}).then(function(){ msg('Angemeldet.','ok'); setTimeout(load,500); })
+      .catch(function(e){ msg(e.message,'err'); $('#bGo').disabled=false; $('#bGo').textContent='Verbinden'; });
+  };
+}
+function showTicket(title){
+  $('#ti').textContent = esc(title);
+  $('#sub').textContent = 'Bitte gib deinen 6-stelligen Anmeldecode ein.';
+  $('#body').innerHTML =
+    '<label for="pin">Anmeldecode</label><input id="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="000000" autocomplete="one-time-code">' +
+    '<button id="bGo">Anmelden</button>';
+  var pin = $('#pin');
+  pin.addEventListener('input', function(){ pin.value = pin.value.replace(/\D/g,'').slice(0,6); });
+  pin.addEventListener('keydown', function(ev){ if (ev.key==='Enter') $('#bGo').click(); });
+  $('#bGo').onclick = function(){
+    if (pin.value.length !== 6) { msg('Bitte eine 6-stellige PIN eingeben.','err'); return; }
+    $('#bGo').disabled = true; $('#bGo').textContent = 'Prüfe…';
+    post('/api/guest/redeem',{pin: pin.value}).then(function(){ msg('Angemeldet.','ok'); setTimeout(load,500); })
+      .catch(function(e){ msg(e.message,'err'); $('#bGo').disabled=false; $('#bGo').textContent='Anmelden'; pin.focus(); });
+  };
+  setTimeout(function(){ pin.focus(); }, 150);
+}
+function load(){
+  msg('','');
+  fetch('/api/guest/info').then(function(r){ return r.json(); }).then(function(d){
+    if (d.online) { showOnline(d.internet); return; }
+    if (d.mode === 2) { showTicket(d.title); return; }
+    if (d.mode === 1) { showSimple(d.title); return; }
+    $('#ti').textContent = 'Kein Gäste-Portal aktiv';
+    $('#sub').textContent = 'Bitte die normale Adresse verwenden.';
+    $('#body').innerHTML = '';
+  }).catch(function(){
+    $('#sub').textContent = 'Verbindung zum ESP32 nicht möglich. Seite neu laden.';
+  });
+}
+load();
+</script>
+</body>
+</html>
