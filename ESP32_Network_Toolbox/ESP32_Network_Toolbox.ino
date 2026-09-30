@@ -2530,767 +2530,767 @@ void loop() {
 //  15) WEBOBERFLAECHE (HTML, CSS, JavaScript) - liegt im Flash des ESP32
 // ============================================================================
 
-const char INDEX_HTML[] PROGMEM = R"HTMLPAGE(<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0b1220">
-<title>ESP32 Network Toolbox</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='%234f8cff'/%3E%3Cpath d='M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='12' cy='19' r='1.4' fill='white'/%3E%3C/svg%3E">
-<style>
-:root{--bg:#0b1220;--bg2:#0f1729;--card:#141d31;--card2:#1b2740;--line:#25324d;--tx:#e8eefb;--mut:#8fa0c0;--acc:#4f8cff;--ok:#2fd07f;--warn:#f5b942;--err:#ff5d6c;--r:16px}
-*{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
-body{min-height:100vh}
-h1,h2,h3{margin:0;font-weight:650}
-h2{font-size:17px}
-h3{font-size:15px;color:var(--mut);font-weight:600}
-a{color:var(--acc)}
-.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:middle}
-.sprite{position:absolute;width:0;height:0;overflow:hidden}
-.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
-.side{position:sticky;top:0;height:100vh;padding:18px 12px;background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
-.brand{display:flex;align-items:center;gap:10px;padding:6px 10px 18px;font-weight:700;font-size:16px}
-.brand i{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,#4f8cff,#7a5cff);color:#fff}
-.nav{display:flex;flex-direction:column;gap:4px}
-.nav a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;color:var(--mut);text-decoration:none;cursor:pointer;white-space:nowrap}
-.nav a:hover{background:rgba(255,255,255,.04);color:var(--tx)}
-.nav a.on{background:rgba(79,140,255,.17);color:#fff}
-.foot{margin-top:auto;padding:10px;color:var(--mut);font-size:12px}
-main{padding:22px 26px 40px;min-width:0;max-width:1200px;width:100%}
-.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
-.top h1{font-size:22px;flex:1}
-.dot{width:10px;height:10px;border-radius:50%;background:var(--ok);display:inline-block;flex:none}
-.dot.off{background:var(--err)}
-.dot.warn{background:var(--warn)}
-.dot.busy{background:var(--acc)}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}
-.card+.card,.grid+.card,.card+.grid,.banner+.card{margin-top:14px}
-.grid{display:grid;gap:14px}
-.grid>.card{margin-top:0!important}
-.g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-.stat .lbl{color:var(--mut);font-size:13px;display:flex;align-items:center;gap:8px}
-.stat .val{font-size:26px;font-weight:700;margin:6px 0 2px;display:flex;align-items:center;gap:8px}
-.stat .sub{color:var(--mut);font-size:12.5px;min-height:18px}
-.meter{height:8px;border-radius:9px;background:#0e1628;overflow:hidden;margin-top:10px}
-.meter i{display:block;height:100%;border-radius:9px;background:var(--acc);transition:width .4s}
-.meter i.mid{background:var(--warn)}.meter i.hi{background:var(--err)}
-.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--card2);color:var(--tx);padding:10px 16px;border-radius:12px;font:inherit;font-weight:550;cursor:pointer;touch-action:manipulation}
-.btn:hover{border-color:#3a4c73}
-.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}
-.btn.dng{background:rgba(255,93,108,.13);border-color:rgba(255,93,108,.4);color:#ff9aa4}
-.btn.sm{padding:6px 11px;font-size:13px;border-radius:10px}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-input,select{background:#0e1628;border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:10px 12px;font:inherit;min-width:0;max-width:100%}
-input:focus,select:focus{outline:2px solid rgba(79,140,255,.5);border-color:var(--acc)}
-input[type=checkbox]{width:18px;height:18px;padding:0;accent-color:var(--acc)}
-label{display:block;color:var(--mut);font-size:13px;margin:12px 0 5px}
-.filters{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
-.srch{position:relative;flex:1 1 200px}
-.srch .ic{position:absolute;left:11px;top:11px;color:var(--mut);width:18px;height:18px}
-.srch input{width:100%;padding-left:36px}
-.scroll{overflow-x:auto;padding:6px 6px}
-.tbl{width:100%;border-collapse:collapse;min-width:460px}
-.tbl th{color:var(--mut);font-weight:600;font-size:12.5px;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
-.tbl td{padding:11px 12px;border-bottom:1px solid rgba(37,50,77,.6);vertical-align:middle}
-.tbl tr:last-child td{border-bottom:0}
-.mut{color:var(--mut)}
-.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}
-.sig{display:flex;align-items:center;gap:8px;min-width:120px}
-.sig b{font-weight:600;min-width:56px}
-.sig span{flex:1;height:7px;background:#0e1628;border-radius:9px;overflow:hidden;min-width:40px}
-.sig span i{display:block;height:100%;border-radius:9px}
-.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:rgba(143,160,192,.15);color:var(--mut);white-space:nowrap}
-.tag.ok{background:rgba(47,208,127,.15);color:var(--ok)}
-.tag.warn{background:rgba(245,185,66,.15);color:var(--warn)}
-.tag.err{background:rgba(255,93,108,.15);color:var(--err)}
-.tag.acc{background:rgba(79,140,255,.16);color:#8fb4ff}
-.banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-radius:14px;margin-bottom:12px;border:1px solid;font-size:14px}
-.banner.warn{background:rgba(245,185,66,.1);border-color:rgba(245,185,66,.4);color:#ffd88a}
-.banner.ok{background:rgba(47,208,127,.1);border-color:rgba(47,208,127,.4);color:#8ff0bd}
-.banner.info{background:rgba(79,140,255,.1);border-color:rgba(79,140,255,.4);color:#a9c5ff}
-.banner span{flex:1;min-width:200px}
-.chart{display:flex;align-items:flex-end;gap:6px;height:190px;padding:6px 0 0}
-.chart .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}
-.chart .col b{font-size:12px;color:var(--mut);margin-bottom:4px;font-weight:600}
-.chart .col .bx{width:100%;max-width:38px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#6aa0ff,#3563d4);min-height:3px;transition:height .4s}
-.chart .col .bx.hot{background:linear-gradient(180deg,#ffcf6b,#e0902a)}
-.chart .col .bx.zero{background:#1d2a45}
-.chart .col span{font-size:12px;margin-top:6px;color:var(--mut)}
-.chart .col.rec span{color:var(--ok);font-weight:700}
-canvas{width:100%;height:260px;display:block;background:#0e1628;border-radius:12px}
-.kv{display:grid;grid-template-columns:minmax(120px,auto) 1fr;gap:9px 16px}
-.kv div:nth-child(odd){color:var(--mut)}
-.kv div:nth-child(even){word-break:break-word}
-.prog{height:14px;border-radius:99px;background:#0e1628;overflow:hidden;margin:12px 0 6px}
-.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4f8cff,#7aa8ff);border-radius:99px;transition:width .35s}
-.prog.busy i{background:repeating-linear-gradient(45deg,#4f8cff 0 12px,#6b9dff 12px 24px);background-size:34px 34px;animation:mv 1s linear infinite}
-@keyframes mv{to{background-position:34px 0}}
-pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-radius:12px;padding:12px 14px;margin:8px 0 0;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:220px;overflow:auto}
-.log{font:13px/1.55 ui-monospace,Menlo,Consolas,monospace;max-height:70vh;overflow:auto}
-.log div{padding:3px 0;border-bottom:1px solid rgba(37,50,77,.5);display:flex;gap:12px}
-.log .t{color:var(--mut);flex:none}
-.log .l1{color:var(--warn)}.log .l2{color:var(--err)}
-.hint{color:var(--mut);font-size:13px;margin-top:10px}
-.sec{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.sec .ic{color:var(--acc)}
-.sub-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.sub-nav a{padding:7px 14px;border-radius:99px;background:var(--card);border:1px solid var(--line);color:var(--mut);text-decoration:none;font-size:13.5px;cursor:pointer}
-.sub-nav a:hover{color:var(--tx)}
-.ovl{position:fixed;inset:0;background:rgba(5,9,18,.82);display:grid;place-items:center;z-index:50;padding:16px;backdrop-filter:blur(6px)}
-.ovl .card{width:100%;max-width:380px}
-.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1e2c49;border:1px solid var(--line);padding:11px 18px;border-radius:12px;z-index:60;max-width:92vw;box-shadow:0 8px 30px rgba(0,0,0,.4)}
-.toast.err{border-color:var(--err);color:#ffb0b8}.toast.ok{border-color:var(--ok)}
-.empty{text-align:center;color:var(--mut);padding:26px 10px}
-.pill-row{display:flex;flex-wrap:wrap;gap:8px}
-.act{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
-.act .btn{justify-content:flex-start;text-align:left;padding:13px 16px}
-@media(max-width:860px){
-  .app{grid-template-columns:minmax(0,1fr)}
-  .side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;flex-direction:row;overflow-x:auto;padding:6px 8px calc(6px + env(safe-area-inset-bottom));border-right:0;border-top:1px solid var(--line);z-index:20;gap:2px}
-  .brand,.foot{display:none}
-  .nav{flex-direction:row;gap:2px}
-  .nav a{flex-direction:column;gap:3px;font-size:11px;padding:7px 11px;min-width:66px;text-align:center}
-  main{padding:16px 14px 96px}
-  .hm{display:none}
-  .toast{bottom:100px}
-}
-</style>
-</head>
-<body>
-<svg class="sprite" aria-hidden="true"><defs>
-<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
-<symbol id="i-wifi" viewBox="0 0 24 24"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><path d="M12 20h.01"/></symbol>
-<symbol id="i-bars" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></symbol>
-<symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
-<symbol id="i-radio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></symbol>
-<symbol id="i-bt" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/></symbol>
-<symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
-<symbol id="i-gear" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
-<symbol id="i-power" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10"/></symbol>
-<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></symbol>
-<symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></symbol>
-<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></symbol>
-<symbol id="i-play" viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></symbol>
-<symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
-<symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></symbol>
-<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
-<symbol id="i-unlock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></symbol>
-<symbol id="i-out" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
-<symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 19a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 9V3"/></symbol>
-<symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
-<symbol id="i-cpu" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/></symbol>
-<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
-<symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></symbol>
-<symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
-</defs></svg>
-
-<div class="app">
-  <aside class="side">
-    <div class="brand"><i><svg class="ic"><use href="#i-wifi"/></svg></i><span>Network Toolbox</span></div>
-    <nav class="nav" id="nav"></nav>
-    <div class="foot" id="foot">ESP32-S3 N16R8</div>
-  </aside>
-  <main>
-    <div class="top"><h1 id="pt">Dashboard</h1><span id="conn" class="dot" title="Verbindung"></span><button class="btn sm" id="btnOut" title="Abmelden" style="display:none"><svg class="ic"><use href="#i-out"/></svg><span class="hm">Abmelden</span></button></div>
-    <div id="banners"></div>
-    <div id="view"></div>
-  </main>
-</div>
-<div id="ovl"></div>
-
-<script>
-"use strict";
-// ---------------------------------------------------------------- Helfer ---
-const $ = (s, r) => (r || document).querySelector(s);
-const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
-const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ic = n => '<svg class="ic"><use href="#i-' + n + '"/></svg>';
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-let TOKEN = '';
-try { TOKEN = sessionStorage.getItem('tok') || ''; } catch (e) {}
-let PUB = {auth: true, fw: '', demo: false};
-let ST = null;
-let timers = [];
-let curPage = '';
-let pending = null;
-let connOk = true;
-
-function setToken(t) {
-  TOKEN = t || '';
-  try { if (TOKEN) sessionStorage.setItem('tok', TOKEN); else sessionStorage.removeItem('tok'); } catch (e) {}
-  $('#btnOut').style.display = (TOKEN && PUB.auth) ? '' : 'none';
-}
-function setConn(ok) {
-  connOk = ok;
-  $('#conn').className = 'dot' + (ok ? '' : ' off');
-  $('#conn').title = ok ? 'Verbunden' : 'Keine Verbindung zum ESP32';
-}
-async function api(path, data) {
-  const opt = {headers: {'X-Token': TOKEN}, cache: 'no-store'};
-  if (data !== undefined) { opt.method = 'POST'; opt.body = new URLSearchParams(data); }
-  let r;
-  try { r = await fetch(path, opt); } catch (e) { setConn(false); throw new Error('Keine Verbindung zum ESP32'); }
-  setConn(true);
-  if (r.status === 401 && path !== '/api/login') { showLogin(); throw new Error('Nicht angemeldet'); }
-  let j = {};
-  try { j = await r.json(); } catch (e) {}
-  if (!r.ok || j.ok === false) throw new Error(j.error || ('Fehler ' + r.status));
-  return j;
-}
-let toastT = 0;
-function toast(msg, type) {
-  let t = $('#toast');
-  if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
-  t.className = 'toast ' + (type || '');
-  t.textContent = msg;
-  t.style.display = '';
-  clearTimeout(toastT);
-  toastT = setTimeout(() => { t.style.display = 'none'; }, type === 'err' ? 5000 : 2800);
-}
-async function act(path, data, okMsg) {
-  try { const r = await api(path, data || {}); if (okMsg !== false) toast(okMsg || r.msg || 'OK', 'ok'); return r; }
-  catch (e) { toast(e.message, 'err'); return null; }
-}
-function clearTimers() { timers.forEach(clearInterval); timers = []; }
-function every(fn, ms) { const w = async () => { try { await fn(); } catch (e) {} }; w(); const t = setInterval(w, ms); timers.push(t); return t; }
-function fmtB(n) {
-  n = Number(n) || 0;
-  if (n >= 1048576) return (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB';
-  if (n >= 1024) return (n / 1024).toFixed(0) + ' KB';
-  return n + ' B';
-}
-function fmtUp(s) {
-  s = Number(s) || 0;
-  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
-  const p = v => String(v).padStart(2, '0');
-  return (d ? d + ' T ' : '') + p(h) + ':' + p(m) + ':' + p(x);
-}
-function pctColor(p) { return p >= 90 ? 'hi' : (p >= 70 ? 'mid' : ''); }
-function sigColor(r) { return r >= -60 ? 'var(--ok)' : (r >= -75 ? 'var(--warn)' : 'var(--err)'); }
-function sigPct(r) { return clamp(Math.round((r + 100) * 2), 4, 100); }
-function sigBar(r) {
-  return '<div class="sig"><b>' + r + ' dBm</b><span><i style="width:' + sigPct(r) + '%;background:' + sigColor(r) + '"></i></span></div>';
-}
-function go(p) { location.hash = '#' + p; }
-function meter(p) { return '<div class="meter"><i class="' + pctColor(p) + '" style="width:' + clamp(p, 0, 100) + '%"></i></div>'; }
-
-// ----------------------------------------------------------------- Login ---
-function showLogin() {
-  setToken('');
-  clearTimers();
-  if ($('#login')) return;
-  $('#ovl').innerHTML = '<div class="ovl" id="login"><form class="card" id="lf" autocomplete="on"><div class="sec">' + ic('lock') + '<h2>Anmelden</h2></div>' +
-    '<label>Benutzername</label><input id="lu" name="username" autocomplete="username" autocapitalize="none" style="width:100%">' +
-    '<label>Passwort</label><input id="lp" name="password" type="password" autocomplete="current-password" style="width:100%">' +
-    '<div id="lerr" class="hint" style="color:var(--err);min-height:20px"></div>' +
-    '<button class="btn pri" style="width:100%;margin-top:6px" type="submit">Anmelden</button></form></div>';
-  $('#lu').focus();
-  $('#lf').onsubmit = async ev => {
-    ev.preventDefault();
-    try {
-      const r = await api('/api/login', {user: $('#lu').value, pass: $('#lp').value});
-      setToken(r.token);
-      $('#ovl').innerHTML = '';
-      boot();
-    } catch (e) { $('#lerr').textContent = e.message; }
-  };
-}
-
-// --------------------------------------------------- Banner & Statusleiste ---
-function paintBanners() {
-  if (!ST) return;
-  let h = '';
-  if (ST.demo) h += '<div class="banner info">' + ic('flask') + '<span><b>DEMO-Modus:</b> WLAN-, BLE- und Update-Daten sind simuliert.</span></div>';
-  if (ST.notice) h += '<div class="banner ok">' + ic('download') + '<span>' + esc(ST.notice) + '</span><button class="btn sm" id="bnDismiss">OK</button></div>';
-  if (ST.warn && ST.warn.defaultWeb && ST.auth) h += '<div class="banner warn">' + ic('shield') + '<span><b>Sicherheitshinweis:</b> Es wird noch das Standard-Passwort des Webinterfaces verwendet. Bitte jetzt ändern.</span><button class="btn sm" id="bnPw">Passwort ändern</button></div>';
-  if (ST.warn && ST.warn.defaultAp) h += '<div class="banner warn">' + ic('wifi') + '<span><b>Hinweis:</b> Das Standard-WLAN-Passwort ist noch aktiv. Bitte unter Einstellungen ändern.</span><button class="btn sm" id="bnAp">WLAN-Passwort ändern</button></div>';
-  const b = $('#banners');
-  if (b.dataset.h !== h) {
-    b.dataset.h = h;
-    b.innerHTML = h;
-    const d = $('#bnDismiss'); if (d) d.onclick = async () => { await act('/api/notice/dismiss', {}, false); ST.notice = ''; paintBanners(); };
-    const p = $('#bnPw'); if (p) p.onclick = () => { pending = 'web'; go('settings'); };
-    const a = $('#bnAp'); if (a) a.onclick = () => { pending = 'ap'; go('settings'); };
-  }
-}
-async function refreshStatus() {
-  ST = await api('/api/status');
-  paintBanners();
-  if (curPage === 'dashboard') paintDash();
-}
-
-// -------------------------------------------------------- Neustart-Warten ---
-async function waitForDevice(text) {
-  clearTimers();
-  $('#ovl').innerHTML = '<div class="ovl"><div class="card" style="text-align:center">' + ic('refresh') + '<h2 style="margin:10px 0 6px">' + esc(text || 'ESP32 startet neu...') + '</h2><div class="hint">Diese Seite lädt automatisch neu. Falls nicht: WLAN-Verbindung prüfen und die Seite neu laden.</div></div></div>';
-  await sleep(4000);
-  for (let i = 0; i < 90; i++) {
-    try {
-      const r = await fetch('/api/public', {cache: 'no-store'});
-      if (r.ok) { location.reload(); return; }
-    } catch (e) {}
-    await sleep(1500);
-  }
-  $('#ovl').innerHTML = '<div class="ovl"><div class="card"><h2>Keine Verbindung</h2><div class="hint">Verbinde dich wieder mit dem WLAN des ESP32 und lade die Seite neu.</div><button class="btn pri" style="margin-top:12px" onclick="location.reload()">Neu laden</button></div></div>';
-}
-async function doRestart() {
-  if (!confirm('ESP32 jetzt neu starten?')) return;
-  if (await act('/api/system/restart', {}, false)) waitForDevice('ESP32 startet neu...');
-}
-
-// ------------------------------------------------------------- Dashboard ---
-const VIEWS = {};
-function statCard(icon, label, val, sub, extra) {
-  return '<div class="card stat"><div class="lbl">' + ic(icon) + label + '</div><div class="val">' + val + '</div><div class="sub">' + (sub || '') + '</div>' + (extra || '') + '</div>';
-}
-function paintDash() {
-  const el = $('#dashbody');
-  if (!el || !ST) return;
-  const s = ST, w = s.wifi, m = s.mem;
-  const ramP = m.heap ? Math.round((m.heap - m.free) * 100 / m.heap) : 0;
-  const psP = m.psram ? Math.round((m.psram - m.psramFree) * 100 / m.psram) : 0;
-  const flP = m.flash ? Math.round(m.sketch * 100 / m.flash) : 0;
-  let wl, wc;
-  if (w.test) { wl = 'Testmodus'; wc = 'warn'; } else if (w.ap) { wl = 'Aktiv'; wc = ''; } else { wl = 'Gestoppt'; wc = 'off'; }
-  let bl = 'Bereit', bc = '';
-  if (s.ble.state === 'scanning') { bl = 'Scannt...'; bc = 'busy'; } else if (s.ble.state === 'error') { bl = 'Fehler'; bc = 'off'; }
-  let internet = w.sta.state === 'connected' ? 'Heim-WLAN: ' + esc(w.sta.ssid) : (w.sta.ssid ? 'Heim-WLAN: ' + w.sta.state : 'Kein Heim-WLAN (offline)');
-  el.innerHTML =
-    '<div class="card" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap"><div style="width:52px;height:52px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#4f8cff,#7a5cff)">' + ic('cpu').replace('class="ic"', 'class="ic" style="width:28px;height:28px"') + '</div>' +
-    '<div style="flex:1;min-width:200px"><h2>' + esc(s.chip.model) + ' &middot; N16R8</h2><div class="mut">' + esc(s.board) + ' &middot; Firmware v' + esc(s.fw) + ' &middot; Laufzeit ' + fmtUp(s.up) + '</div></div>' +
-    '<span class="tag acc">' + esc(s.chip.mhz) + ' MHz &middot; ' + esc(s.chip.cores) + ' Kerne</span></div>' +
-    '<div class="grid g4" style="margin-top:14px">' +
-    statCard('wifi', 'WLAN', '<span class="dot ' + wc + '"></span>' + wl, esc(w.ssid || '-') + ' &middot; Kanal ' + w.ch) +
-    statCard('bt', 'BLE', '<span class="dot ' + bc + '"></span>' + bl, s.ble.found + ' Geräte gefunden') +
-    statCard('cpu', 'RAM', ramP + ' %', fmtB(m.heap - m.free) + ' von ' + fmtB(m.heap), meter(ramP)) +
-    statCard('cpu', 'PSRAM', m.psram ? psP + ' %' : 'n/a', m.psram ? fmtB(m.psram - m.psramFree) + ' von ' + fmtB(m.psram) : 'nicht erkannt (Einstellung "OPI PSRAM"?)', m.psram ? meter(psP) : '') +
-    statCard('download', 'Flash', flP + ' %', 'Programm ' + fmtB(m.sketch) + ' von ' + fmtB(m.flash), meter(flP)) +
-    statCard('users', 'Geräte am AP', w.clients, 'verbunden mit eigenem WLAN') +
-    statCard('wifi', 'Gefundene WLANs', w.found, w.scanning ? 'Scan läuft...' : 'aus letztem Scan') +
-    statCard('globe', 'Internet', w.sta.state === 'connected' ? 'Online' : 'Offline', internet) +
-    '</div>' +
-    '<div class="card"><div class="sec">' + ic('cpu') + '<h2>Systeminformationen</h2></div><div class="kv">' +
-    '<div>Chip-Modell</div><div>' + esc(s.chip.model) + ' (Revision ' + esc(s.chip.rev) + ')</div>' +
-    '<div>CPU</div><div>' + esc(s.chip.mhz) + ' MHz, ' + esc(s.chip.cores) + ' Kerne</div>' +
-    '<div>Flash</div><div>' + fmtB(m.flash) + '</div>' +
-    '<div>PSRAM</div><div>' + (m.psram ? fmtB(m.psram) : 'nicht erkannt') + '</div>' +
-    '<div>Freier RAM</div><div>' + fmtB(m.free) + ' (Minimum seit Start: ' + fmtB(m.minFree) + ')</div>' +
-    '<div>Temperatur</div><div>' + Number(s.chip.temp).toFixed(1) + ' °C</div>' +
-    '<div>Laufzeit</div><div>' + fmtUp(s.up) + '</div>' +
-    '<div>Firmware</div><div>v' + esc(s.fw) + '</div>' +
-    '<div>MAC</div><div class="mono">' + esc(s.chip.mac) + '</div>' +
-    '<div>ESP-IDF / Core</div><div>' + esc(s.chip.sdk) + ' / ' + esc(s.chip.core) + '</div></div></div>';
-}
-VIEWS.dashboard = el => {
-  el.innerHTML = '<div id="dashbody"><div class="card empty">Lade...</div></div>' +
-    '<div class="card"><div class="sec">' + ic('play') + '<h2>Schnellaktionen</h2></div><div class="act">' +
-    '<button class="btn" data-q="wifi">' + ic('wifi') + 'WLAN scannen</button>' +
-    '<button class="btn" data-q="ble">' + ic('bt') + 'BLE scannen</button>' +
-    '<button class="btn" data-q="apstart">' + ic('radio') + 'Eigenes WLAN starten</button>' +
-    '<button class="btn" data-q="test">' + ic('flask') + 'Test-WLANs starten</button>' +
-    '<button class="btn" data-q="logs">' + ic('list') + 'Logs anzeigen</button>' +
-    '<button class="btn" data-q="settings">' + ic('gear') + 'Einstellungen</button>' +
-    '<button class="btn dng" data-q="restart">' + ic('power') + 'ESP32 neu starten</button></div></div>';
-  paintDash();
-  $$('[data-q]', el).forEach(b => b.onclick = async () => {
-    const q = b.dataset.q;
-    if (q === 'wifi') { pending = 'scan'; go('wifi'); }
-    else if (q === 'ble') { pending = 'scan'; go('ble'); }
-    else if (q === 'apstart') { await act('/api/ap/start', {}, 'Eigenes WLAN gestartet'); refreshStatus().catch(() => {}); }
-    else if (q === 'test') go('myap');
-    else if (q === 'logs') go('logs');
-    else if (q === 'settings') go('settings');
-    else if (q === 'restart') doRestart();
-  });
-};
-
-// ----------------------------------------------------------- WLAN-Scanner ---
-let WF = {nets: [], state: 'idle', age: -1};
-const ENC_OPTS = ['', 'Offen', 'WEP', 'WPA', 'WPA2', 'WPA3', 'Enterprise'];
-function encMatch(a, f) {
-  if (!f) return true;
-  if (f === 'Offen') return a === 'Offen';
-  if (f === 'Enterprise') return a.indexOf('Enterprise') >= 0;
-  return a.indexOf(f) >= 0;
-}
-function encTag(a) {
-  const c = a === 'Offen' ? 'err' : (a === 'WEP' || a === 'WPA' ? 'warn' : (a.indexOf('WPA3') >= 0 ? 'ok' : ''));
-  return '<span class="tag ' + c + '">' + esc(a) + '</span>';
-}
-VIEWS.wifi = el => {
-  el.innerHTML =
-    '<div class="card"><div class="bar"><button class="btn pri" id="wsStart">' + ic('play') + 'Scan starten</button><button class="btn" id="wsStop">' + ic('stop') + 'Scan stoppen</button><span id="wsInfo" class="mut"></span></div>' +
-    '<div class="filters"><div class="srch">' + ic('search') + '<input id="fq" placeholder="SSID suchen..." autocomplete="off"></div>' +
-    '<select id="fsig"><option value="-200">Signal: alle</option><option value="-50">stärker als -50 dBm</option><option value="-60">stärker als -60 dBm</option><option value="-70">stärker als -70 dBm</option><option value="-80">stärker als -80 dBm</option></select>' +
-    '<select id="fch"><option value="0">Kanal: alle</option>' + Array.from({length: 14}, (_, i) => '<option value="' + (i + 1) + '">Kanal ' + (i + 1) + '</option>').join('') + '</select>' +
-    '<select id="fenc">' + ENC_OPTS.map(o => '<option value="' + o + '">' + (o || 'Verschlüsselung: alle') + '</option>').join('') + '</select>' +
-    '<select id="fsort"><option value="strong">Sortierung: stärkstes Signal</option><option value="weak">schwächstes Signal</option><option value="ch">Kanal</option><option value="name">Name</option></select></div></div>' +
-    '<div class="card scroll"><table class="tbl"><thead><tr><th>Name (SSID)</th><th>Signal</th><th>Kanal</th><th>Verschlüsselung</th><th class="hm">BSSID</th><th></th></tr></thead><tbody id="wtb"></tbody></table></div>';
-  const paint = () => {
-    const q = $('#fq').value.trim().toLowerCase(), sig = +$('#fsig').value, ch = +$('#fch').value, enc = $('#fenc').value, so = $('#fsort').value;
-    let list = WF.nets.filter(n => n.rssi >= sig && (!ch || n.ch === ch) && encMatch(n.auth, enc) && (!q || n.ssid.toLowerCase().indexOf(q) >= 0 || n.bssid.toLowerCase().indexOf(q) >= 0));
-    list.sort((a, b) => so === 'weak' ? a.rssi - b.rssi : so === 'ch' ? (a.ch - b.ch || b.rssi - a.rssi) : so === 'name' ? a.ssid.localeCompare(b.ssid) : b.rssi - a.rssi);
-    $('#wtb').innerHTML = list.length ? list.map(n =>
-      '<tr><td><b>' + esc(n.ssid) + '</b>' + (n.hidden ? ' <span class="tag">versteckt</span>' : '') + '</td><td>' + sigBar(n.rssi) + '</td><td>' + n.ch + '</td><td>' + encTag(n.auth) + '</td><td class="hm mono">' + esc(n.bssid) + '</td>' +
-      '<td><button class="btn sm" data-b="' + esc(n.bssid) + '" data-c="' + n.ch + '" data-s="' + esc(n.ssid) + '">' + ic('activity') + 'Verfolgen</button></td></tr>').join('')
-      : '<tr><td colspan="6" class="empty">' + (WF.nets.length ? 'Keine Netzwerke für diesen Filter.' : 'Noch keine Ergebnisse. Starte einen Scan.') + '</td></tr>';
-    $$('[data-b]', el).forEach(b => b.onclick = () => { pending = {bssid: b.dataset.b, ch: +b.dataset.c, ssid: b.dataset.s}; go('signal'); });
-    const running = WF.state === 'running' && !WF.track;
-    $('#wsStart').disabled = running; $('#wsStop').disabled = !running;
-    $('#wsInfo').textContent = running ? 'Scan läuft...' : (WF.nets.length + ' Netzwerke' + (WF.age >= 0 ? ' (vor ' + WF.age + ' s)' : '') + (list.length !== WF.nets.length ? ', ' + list.length + ' angezeigt' : ''));
-  };
-  let poller = null;
-  const load = async () => {
-    WF = await api('/api/wifi/scan');
-    paint();
-    if (WF.state !== 'running' && poller) { clearInterval(poller); poller = null; }
-  };
-  const startPoll = () => { if (!poller) { poller = setInterval(() => load().catch(() => {}), 1200); timers.push(poller); } };
-  $('#wsStart').onclick = async () => { if (await act('/api/wifi/scan/start', {}, 'Scan gestartet')) { WF.state = 'running'; WF.track = false; paint(); startPoll(); } };
-  $('#wsStop').onclick = async () => { await act('/api/wifi/scan/stop', {}, 'Scan gestoppt'); load().catch(() => {}); };
-  ['fq', 'fsig', 'fch', 'fenc', 'fsort'].forEach(i => $('#' + i).addEventListener(i === 'fq' ? 'input' : 'change', paint));
-  load().then(() => { if (WF.state === 'running') startPoll(); if (pending === 'scan') { pending = null; $('#wsStart').click(); } }).catch(() => {});
-};
-
-// ---------------------------------------------------------- Kanaluebersicht ---
-VIEWS.channels = el => {
-  el.innerHTML = '<div class="card"><div class="bar"><button class="btn pri" id="csStart">' + ic('play') + 'Scan starten</button><span id="csInfo" class="mut"></span></div></div>' +
-    '<div class="card"><div class="sec">' + ic('bars') + '<h2>Netzwerke pro WLAN-Kanal (2,4 GHz)</h2></div><div class="chart" id="chart"></div><div class="hint" id="chHint"></div></div>' +
-    '<div class="card"><h3>Netzwerke pro Kanal</h3><div id="chList" style="margin-top:10px"></div></div>';
-  const paint = () => {
-    const cnt = Array(14).fill(0), best = Array(14).fill(-200), names = Array.from({length: 14}, () => []);
-    WF.nets.forEach(n => { if (n.ch >= 1 && n.ch <= 14) { cnt[n.ch - 1]++; best[n.ch - 1] = Math.max(best[n.ch - 1], n.rssi); names[n.ch - 1].push(n.ssid); } });
-    const mx = Math.max(1, ...cnt);
-    // Empfehlung: unter den ueberlappungsfreien Kanaelen 1/6/11 den am wenigsten belegten waehlen
-    const w = [1, .7, .35, .12];
-    let rec = 0, recScore = 1e9;
-    [1, 6, 11].forEach(c => { let s = 0; WF.nets.forEach(n => { const d = Math.abs(n.ch - c); if (d < w.length) s += w[d] * (n.rssi > -75 ? 1.5 : 1); }); if (s < recScore) { recScore = s; rec = c; } });
-    $('#chart').innerHTML = cnt.slice(0, 13).map((c, i) => '<div class="col' + (WF.nets.length && rec === i + 1 ? ' rec' : '') + '"><b>' + (c || '') + '</b><div class="bx ' + (c === 0 ? 'zero' : (c === mx && c > 1 ? 'hot' : '')) + '" style="height:' + (c ? 8 + c / mx * 82 : 2) + '%"></div><span>' + (i + 1) + '</span></div>').join('');
-    $('#chHint').textContent = WF.nets.length ? 'Empfehlung für den eigenen Access Point: Kanal ' + rec + ' (am wenigsten Störung durch andere Netze). Nur die Kanäle 1, 6 und 11 überlappen sich nicht.' : 'Starte einen Scan, um die Kanalbelegung zu sehen.';
-    $('#chList').innerHTML = cnt.slice(0, 13).map((c, i) => c ? '<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>Kanal ' + (i + 1) + '</b> <span class="tag acc">' + c + '</span> <span class="mut">stärkstes Signal ' + best[i] + ' dBm</span><div class="mut" style="font-size:13px">' + names[i].map(esc).join(', ') + '</div></div>' : '').join('') || '<div class="empty">Keine Daten.</div>';
-    const running = WF.state === 'running' && !WF.track;
-    $('#csStart').disabled = running;
-    $('#csInfo').textContent = running ? 'Scan läuft...' : (WF.nets.length + ' Netzwerke');
-  };
-  let poller = null;
-  const load = async () => { WF = await api('/api/wifi/scan'); paint(); if (WF.state !== 'running' && poller) { clearInterval(poller); poller = null; } };
-  $('#csStart').onclick = async () => { if (await act('/api/wifi/scan/start', {}, 'Scan gestartet')) { WF.state = 'running'; WF.track = false; paint(); if (!poller) { poller = setInterval(() => load().catch(() => {}), 1200); timers.push(poller); } } };
-  load().then(() => { if (WF.state === 'running' && !poller) { poller = setInterval(() => load().catch(() => {}), 1200); timers.push(poller); } }).catch(() => {});
-};
-
-// -------------------------------------------------------------------- RSSI ---
-let TRK = {on: false, target: null, hist: []};
-VIEWS.signal = el => {
-  el.innerHTML = '<div class="card"><div class="bar"><select id="tsel" style="flex:1 1 260px"><option value="">Netzwerk wählen...</option></select><button class="btn" id="tscan">' + ic('search') + 'Netzwerke suchen</button><button class="btn pri" id="tgo">' + ic('play') + 'Start</button></div><div class="hint">Der ESP32 fragt das gewählte Netzwerk jede Sekunde ab (kurze Abfrage nur auf dessen Kanal).</div></div>' +
-    '<div class="grid g4" style="margin-top:14px" id="tstats"></div>' +
-    '<div class="card"><div class="sec">' + ic('activity') + '<h2 id="tname">Signalverlauf</h2></div><canvas id="cv"></canvas></div>';
-  const sel = $('#tsel');
-  const fill = () => {
-    const keep = TRK.target ? TRK.target.bssid : sel.value;
-    sel.innerHTML = '<option value="">Netzwerk wählen...</option>' + WF.nets.slice().sort((a, b) => b.rssi - a.rssi).map(n => '<option value="' + esc(n.bssid) + '" data-c="' + n.ch + '" data-s="' + esc(n.ssid) + '">' + esc(n.ssid) + ' (Kanal ' + n.ch + ', ' + n.rssi + ' dBm)</option>').join('');
-    if (TRK.target && !WF.nets.some(n => n.bssid === TRK.target.bssid)) sel.innerHTML += '<option value="' + esc(TRK.target.bssid) + '" data-c="' + TRK.target.ch + '" data-s="' + esc(TRK.target.ssid) + '">' + esc(TRK.target.ssid) + ' (Kanal ' + TRK.target.ch + ')</option>';
-    sel.value = keep;
-  };
-  const draw = () => {
-    const cv = $('#cv'); if (!cv) return;
-    const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
-    cv.width = W * dpr; cv.height = H * dpr;
-    const g = cv.getContext('2d'); g.scale(dpr, dpr);
-    g.clearRect(0, 0, W, H);
-    const L = 44, R = 10, T = 12, B = 22, lo = -100, hi = -20;
-    const y = v => T + (hi - v) / (hi - lo) * (H - T - B);
-    g.font = '11px system-ui'; g.textBaseline = 'middle';
-    for (let v = -100; v <= -20; v += 20) { g.strokeStyle = '#25324d'; g.beginPath(); g.moveTo(L, y(v)); g.lineTo(W - R, y(v)); g.stroke(); g.fillStyle = '#8fa0c0'; g.fillText(v + '', 6, y(v)); }
-    const h = TRK.hist, N = 120;
-    const x = i => L + (W - L - R) * (i / (N - 1));
-    const off = Math.max(0, N - h.length);
-    g.strokeStyle = '#4f8cff'; g.lineWidth = 2.2; g.lineJoin = 'round';
-    g.beginPath(); let pen = false;
-    h.forEach((v, i) => { if (v === null) { pen = false; return; } const px = x(i + off), py = y(clamp(v, lo, hi)); if (!pen) { g.moveTo(px, py); pen = true; } else g.lineTo(px, py); });
-    g.stroke();
-    const last = h.length ? h[h.length - 1] : null;
-    if (last !== null) { g.fillStyle = sigColor(last); g.beginPath(); g.arc(x(h.length - 1 + off), y(clamp(last, lo, hi)), 4.5, 0, 7); g.fill(); }
-    g.fillStyle = '#8fa0c0'; g.textBaseline = 'alphabetic'; g.fillText('Zeit →   (letzte ' + h.length + ' Messungen)', L, H - 5);
-  };
-  const stats = () => {
-    const v = TRK.hist.filter(x => x !== null), last = TRK.hist.length ? TRK.hist[TRK.hist.length - 1] : null;
-    const c = (l, t, col) => '<div class="card stat"><div class="lbl">' + l + '</div><div class="val" style="' + (col ? 'color:' + col : '') + '">' + t + '</div></div>';
-    $('#tstats').innerHTML = c('Aktuell', last === null ? (TRK.hist.length ? 'nicht gefunden' : '-') : last + ' dBm', last === null ? '' : sigColor(last)) +
-      c('Stärkstes', v.length ? Math.max(...v) + ' dBm' : '-') + c('Schwächstes', v.length ? Math.min(...v) + ' dBm' : '-') +
-      c('Durchschnitt', v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) + ' dBm' : '-');
-    $('#tname').textContent = TRK.target ? 'Signalverlauf: ' + TRK.target.ssid : 'Signalverlauf';
-    $('#tgo').innerHTML = TRK.on ? ic('stop') + 'Stopp' : ic('play') + 'Start';
-    draw();
-  };
-  TRK.paint = stats;
-  const loop = async () => {
-    const mine = TRK.run = (TRK.run || 0) + 1;
-    while (TRK.on && TRK.run === mine) {
-      try {
-        try { await api('/api/wifi/track', {bssid: TRK.target.bssid, ch: TRK.target.ch}); }
-        catch (e) { if (e.message.indexOf('läuft') < 0) throw e; }
-        let d = null;
-        for (let i = 0; i < 40 && TRK.on && TRK.run === mine; i++) { await sleep(250); d = await api('/api/wifi/track'); if (!d.running) break; }
-        if (d && !d.running && TRK.run === mine) { TRK.hist.push(d.found ? d.rssi : null); if (TRK.hist.length > 120) TRK.hist.shift(); if ($('#cv')) stats(); }
-      } catch (e) { if (e.message === 'Nicht angemeldet') { TRK.on = false; break; } await sleep(2000); }
-      await sleep(600);
-    }
-  };
-  $('#tgo').onclick = () => {
-    if (TRK.on) { TRK.on = false; TRK.paint && TRK.paint(); return; }
-    const o = sel.selectedOptions[0];
-    if (!o || !o.value) { toast('Bitte zuerst ein Netzwerk wählen', 'err'); return; }
-    if (!TRK.target || TRK.target.bssid !== o.value) { TRK.hist = []; }
-    TRK.target = {bssid: o.value, ch: +o.dataset.c, ssid: o.dataset.s};
-    TRK.on = true; stats(); loop();
-  };
-  $('#tscan').onclick = async () => {
-    if (TRK.on) { toast('Bitte zuerst die Messung stoppen', 'err'); return; }
-    if (!await act('/api/wifi/scan/start', {}, 'Suche läuft...')) return;
-    for (let i = 0; i < 40; i++) { await sleep(1000); const d = await api('/api/wifi/scan').catch(() => null); if (d && d.state !== 'running') { WF = d; fill(); toast(d.count + ' Netzwerke gefunden', 'ok'); break; } }
-  };
-  window.addEventListener('resize', draw);
-  if (pending && pending.bssid) {
-    TRK.target = pending; TRK.hist = []; pending = null;
-    fill(); sel.value = TRK.target.bssid; TRK.on = true; stats(); loop();
-  } else {
-    api('/api/wifi/scan').then(d => { WF = d; fill(); stats(); }).catch(() => {}); stats();
-  }
-};
-
-// --------------------------------------------------------------- Mein WLAN ---
-VIEWS.myap = el => {
-  el.innerHTML =
-    '<div class="card"><div class="sec">' + ic('radio') + '<h2>Eigenes WLAN (Access Point)</h2></div><div id="apInfo" class="kv"></div><div class="bar" style="margin-top:14px"><button class="btn pri" id="apStart">' + ic('play') + 'WLAN starten</button><button class="btn dng" id="apStop">' + ic('stop') + 'WLAN stoppen</button><button class="btn" id="apSet">' + ic('gear') + 'Name / Passwort / Kanal ändern</button></div>' +
-    '<div class="hint">Wichtig: Stoppst du das WLAN, verlierst du die Verbindung zu dieser Seite. Ein Neustart des ESP32 (Reset-Taste) startet es wieder.</div></div>' +
-    '<div class="card"><div class="sec">' + ic('users') + '<h2>Verbundene Geräte</h2></div><div class="scroll"><table class="tbl"><thead><tr><th>IP-Adresse</th><th>MAC-Adresse</th><th>Signal</th><th>Status</th><th></th></tr></thead><tbody id="cl"></tbody></table></div>' +
-    '<div class="hint">Gilt ausschließlich für Geräte an deinem eigenen ESP32-WLAN. „Sperren“ wirft ein Gerät aus diesem WLAN und verhindert das erneute Verbinden. Handys mit „privater MAC-Adresse“ nutzen pro WLAN eine feste, aber andere MAC.</div></div>' +
-    '<div class="card"><div class="sec">' + ic('flask') + '<h2>Test-WLANs</h2></div>' +
-    '<div class="hint" style="margin:0 0 12px">Der ESP32 erzeugt eigene Test-Access-Points mit zufälligen Namen (z. B. ESP32-Test-4821). Er hat nur <b>ein</b> Funkmodul und kann deshalb nur <b>ein</b> Test-WLAN gleichzeitig senden. Bei mehreren werden sie reihum aktiviert. Sie nutzen das Passwort deines Access Points; diese Weboberfläche bleibt darüber unter 192.168.4.1 erreichbar. Keine fremden Namen, kein Störsender.</div>' +
-    '<div class="bar"><label style="margin:0">Anzahl</label><select id="tcount"><option>1</option><option>2</option><option>3</option><option>5</option></select><label style="margin:0">Wechsel alle</label><select id="tint"><option value="15">15 s</option><option value="30" selected>30 s</option><option value="60">60 s</option></select>' +
-    '<button class="btn pri" id="tStart">' + ic('play') + 'Test-WLANs starten</button><button class="btn dng" id="tStop">' + ic('stop') + 'Alle Test-WLANs stoppen</button></div><div id="tInfo" style="margin-top:14px"></div></div>';
-  const load = async () => {
-    const [a, c] = await Promise.all([api('/api/ap'), api('/api/ap/clients')]);
-    $('#apInfo').innerHTML = '<div>Status</div><div>' + (a.test ? '' : '') + (a.running ? '<span class="tag ok">Aktiv</span>' : '<span class="tag err">Gestoppt</span>') + (a.test.active ? ' <span class="tag warn">Testmodus</span>' : '') + '</div>' +
-      '<div>Name (SSID)</div><div>' + esc(a.ssid || a.cfgSsid) + '</div><div>Kanal</div><div>' + a.ch + (a.ch !== a.cfgCh && a.running ? ' <span class="mut">(eingestellt: ' + a.cfgCh + ' - folgt dem Heim-WLAN)</span>' : '') + '</div><div>Adresse</div><div class="mono">http://' + esc(a.ip) + '</div><div>MAC</div><div class="mono">' + esc(a.mac) + '</div><div>Geräte</div><div>' + a.clients + '</div>';
-    $('#cl').innerHTML = c.clients.length ? c.clients.map(d => '<tr><td>' + esc(d.ip) + '</td><td class="mono">' + esc(d.mac) + '</td><td>' + (d.connected ? sigBar(d.rssi) : '<span class="mut">-</span>') + '</td><td><span class="tag ' + (d.blocked ? 'err' : 'ok') + '">' + esc(d.status) + (d.blocked && !d.connected ? ' (offline)' : '') + '</span></td><td><button class="btn sm" data-m="' + esc(d.mac) + '" data-k="' + (d.blocked ? 'unblock' : 'block') + '">' + ic(d.blocked ? 'unlock' : 'lock') + (d.blocked ? 'Entsperren' : 'Sperren') + '</button></td></tr>').join('') : '<tr><td colspan="5" class="empty">Kein Gerät verbunden.</td></tr>';
-    $$('[data-m]', el).forEach(b => b.onclick = async () => { if (b.dataset.k === 'block' && !confirm('Dieses Gerät aus deinem WLAN werfen und sperren?')) return; await act('/api/ap/' + b.dataset.k, {mac: b.dataset.m}, b.dataset.k === 'block' ? 'Gerät gesperrt' : 'Gerät entsperrt'); load().catch(() => {}); });
-    const t = a.test;
-    $('#tInfo').innerHTML = t.active ? '<div class="pill-row">' + t.names.map((n, i) => '<span class="tag ' + (i === t.idx ? 'ok' : '') + '">' + (i === t.idx ? '● ' : '') + esc(n) + '</span>').join('') + '</div><div class="hint">' + (t.count > 1 ? 'Nächster Wechsel in ' + Math.max(0, t.nextIn) + ' s. ' : '') + 'Endet automatisch in ' + Math.max(0, Math.round(t.left / 60)) + ' Min.</div>' : '<div class="mut">Kein Test-WLAN aktiv.</div>';
-    $('#apStart').disabled = a.running && !t.active; $('#apStop').disabled = !a.running;
-  };
-  $('#apStart').onclick = async () => { await act('/api/ap/start', {}, 'WLAN gestartet'); load().catch(() => {}); };
-  $('#apStop').onclick = async () => { if (!confirm('Eigenes WLAN wirklich stoppen? Du verlierst die Verbindung zu dieser Seite.')) return; await act('/api/ap/stop', {}, 'WLAN wird gestoppt'); };
-  $('#apSet').onclick = () => { pending = 'ap'; go('settings'); };
-  $('#tStart').onclick = async () => {
-    if (!confirm('Test-WLANs starten? Dein aktuelles WLAN wechselt dabei den Namen - verbinde dich danach mit dem angezeigten Test-WLAN (gleiches Passwort).')) return;
-    await act('/api/test/start', {count: $('#tcount').value, interval: $('#tint').value}, 'Test-WLANs gestartet'); load().catch(() => {});
-  };
-  $('#tStop').onclick = async () => { await act('/api/test/stop', {}, 'Test-WLANs gestoppt'); load().catch(() => {}); };
-  every(load, 3000);
-};
-
-// --------------------------------------------------------------- Bluetooth ---
-let BL = {devs: [], state: 'ready'};
-VIEWS.ble = el => {
-  el.innerHTML = '<div class="card"><div class="bar"><select id="bdur"><option value="5">5 s</option><option value="10" selected>10 s</option><option value="30">30 s</option><option value="60">60 s</option></select><button class="btn pri" id="bsStart">' + ic('play') + 'BLE scannen</button><button class="btn" id="bsStop">' + ic('stop') + 'Scan stoppen</button><button class="btn dng" id="bsClear">' + ic('trash') + 'Ergebnisse löschen</button><span id="bsInfo" class="mut"></span></div>' +
-    '<div class="filters"><div class="srch">' + ic('search') + '<input id="bq" placeholder="Name, Adresse oder Hersteller suchen..." autocomplete="off"></div><select id="bsort"><option value="strong">Sortierung: stärkstes Signal</option><option value="weak">schwächstes Signal</option><option value="name">Name</option><option value="mfr">Hersteller</option></select></div></div>' +
-    '<div class="card scroll"><table class="tbl"><thead><tr><th>Gerät</th><th>Adresse</th><th>Signal</th><th>Hersteller</th><th class="hm">Services (UUID)</th></tr></thead><tbody id="btb"></tbody></table></div>';
-  const paint = () => {
-    const q = $('#bq').value.trim().toLowerCase(), so = $('#bsort').value;
-    const list = BL.devs.filter(d => !q || (d.name + ' ' + d.addr + ' ' + d.mfrName + ' ' + d.svc.join(' ')).toLowerCase().indexOf(q) >= 0);
-    list.sort((a, b) => so === 'weak' ? a.rssi - b.rssi : so === 'name' ? (a.name || '￿').localeCompare(b.name || '￿') : so === 'mfr' ? (a.mfrName || '￿').localeCompare(b.mfrName || '￿') : b.rssi - a.rssi);
-    $('#btb').innerHTML = list.length ? list.map(d => '<tr><td><b>' + (d.name ? esc(d.name) : '<span class="mut">(ohne Name)</span>') + '</b></td><td class="mono">' + esc(d.addr) + '</td><td>' + sigBar(d.rssi) + '</td><td>' + (d.mfrName ? esc(d.mfrName) : (d.mfr >= 0 ? '<span class="mut">ID 0x' + d.mfr.toString(16).toUpperCase().padStart(4, '0') + '</span>' : '<span class="mut">-</span>')) + '</td><td class="hm mono">' + (d.svc.length ? d.svc.map(esc).join(', ') : '<span class="mut">-</span>') + '</td></tr>').join('')
-      : '<tr><td colspan="5" class="empty">' + (BL.devs.length ? 'Keine Treffer.' : 'Noch keine Geräte. Starte einen Scan.') + '</td></tr>';
-    const sc = BL.state === 'scanning';
-    $('#bsStart').disabled = sc; $('#bsStop').disabled = !sc;
-    $('#bsInfo').textContent = BL.state === 'error' ? 'BLE-Fehler - bitte neu starten' : (sc ? 'Scan läuft... noch ' + Math.max(0, BL.left) + ' s' : BL.devs.length + ' Geräte');
-  };
-  const load = async () => { BL = await api('/api/ble'); paint(); };
-  $('#bsStart').onclick = async () => { if (await act('/api/ble/start', {secs: $('#bdur').value}, 'BLE-Scan gestartet')) { BL.state = 'scanning'; BL.left = +$('#bdur').value; paint(); } };
-  $('#bsStop').onclick = async () => { await act('/api/ble/stop', {}, 'Scan wird gestoppt'); };
-  $('#bsClear').onclick = async () => { await act('/api/ble/clear', {}, 'Ergebnisse gelöscht'); load().catch(() => {}); };
-  ['bq', 'bsort'].forEach(i => $('#' + i).addEventListener(i === 'bq' ? 'input' : 'change', paint));
-  every(load, 1500);
-  if (pending === 'scan') { pending = null; setTimeout(() => $('#bsStart') && $('#bsStart').click(), 300); }
-};
-
-// -------------------------------------------------------------------- Logs ---
-VIEWS.logs = el => {
-  el.innerHTML = '<div class="card"><div class="bar"><button class="btn dng" id="lgClear">' + ic('trash') + 'Logs löschen</button><button class="btn" id="lgRef">' + ic('refresh') + 'Aktualisieren</button><span class="mut" id="lgInfo"></span></div></div><div class="card"><div class="log" id="lg"></div></div>';
-  const load = async () => {
-    const d = await api('/api/logs');
-    const rows = d.logs.slice().reverse();
-    $('#lg').innerHTML = rows.length ? rows.map(l => '<div class="l' + l.l + '"><span class="t">' + fmtUp(l.t) + '</span><span>' + esc(l.m) + '</span></div>').join('') : '<div class="empty">Keine Einträge.</div>';
-    $('#lgInfo').textContent = d.logs.length + ' Einträge (Zeit = Laufzeit seit Start)';
-  };
-  $('#lgClear').onclick = async () => { await act('/api/logs/clear', {}, 'Logs gelöscht'); load().catch(() => {}); };
-  $('#lgRef').onclick = () => load().catch(() => {});
-  every(load, 2500);
-};
-
-// ----------------------------------------------------------- Einstellungen ---
-let UP = null;
-VIEWS.settings = el => {
-  el.innerHTML =
-    '<div class="sub-nav"><a data-s="s-ap">Access Point</a><a data-s="s-web">Webinterface</a><a data-s="s-sta">Internet (Heim-WLAN)</a><a data-s="s-sys">System</a><a data-s="s-upd">Firmware-Update</a></div>' +
-    '<div class="card" id="s-ap"><div class="sec">' + ic('radio') + '<h2>Access Point</h2></div>' +
-    '<label>Name des WLANs (SSID)</label><input id="apSsid" maxlength="32" style="width:100%;max-width:380px"><label>Passwort (8-63 Zeichen, leer = unverändert)</label><input id="apPass" type="password" autocomplete="new-password" maxlength="63" placeholder="unverändert" style="width:100%;max-width:380px"><label>Kanal</label><select id="apCh">' + Array.from({length: 11}, (_, i) => '<option>' + (i + 1) + '</option>').join('') + '</select>' +
-    '<div class="hint">Ist der ESP32 mit einem Heim-WLAN verbunden, übernimmt der Access Point automatisch dessen Kanal.</div><div style="margin-top:14px"><button class="btn pri" id="apSave">Speichern &amp; WLAN neu starten</button></div></div>' +
-    '<div class="card" id="s-web"><div class="sec">' + ic('shield') + '<h2>Webinterface</h2></div>' +
-    '<label style="display:flex;gap:10px;align-items:center;color:var(--tx);font-size:15px"><input type="checkbox" id="wAuth"> Login aktivieren</label>' +
-    '<label>Benutzername</label><input id="wUser" maxlength="32" autocomplete="username" style="width:100%;max-width:380px"><label>Aktuelles Passwort (zur Bestätigung)</label><input id="wOld" type="password" autocomplete="current-password" style="width:100%;max-width:380px"><label>Neues Passwort (mind. 6 Zeichen, leer = unverändert)</label><input id="wNew" type="password" autocomplete="new-password" style="width:100%;max-width:380px">' +
-    '<div style="margin-top:14px"><button class="btn pri" id="wSave">Speichern</button></div></div>' +
-    '<div class="card" id="s-sta"><div class="sec">' + ic('globe') + '<h2>Internet (Heim-WLAN, optional)</h2></div><div class="hint" style="margin:0 0 6px">Nur nötig für Firmware-Updates. Ohne Internet funktioniert alles andere weiterhin.</div><div id="staInfo" class="kv" style="margin:10px 0"></div>' +
-    '<label>WLAN-Name (SSID)</label><input id="sSsid" list="sList" maxlength="32" style="width:100%;max-width:380px"><datalist id="sList"></datalist><label>Passwort</label><input id="sPass" type="password" autocomplete="new-password" maxlength="63" style="width:100%;max-width:380px">' +
-    '<div class="bar" style="margin-top:14px"><button class="btn pri" id="sGo">Verbinden</button><button class="btn" id="sOff">Trennen &amp; vergessen</button></div></div>' +
-    '<div class="card" id="s-sys"><div class="sec">' + ic('cpu') + '<h2>System</h2></div><div class="kv" id="sysInfo"></div><div class="bar" style="margin-top:14px"><button class="btn" id="rst">' + ic('power') + 'Neustart</button><button class="btn dng" id="fac">' + ic('trash') + 'Werkseinstellungen</button></div></div>' +
-    '<div class="card" id="s-upd"><div class="sec">' + ic('download') + '<h2>Firmware-Update</h2></div><div id="updBody"><div class="empty">Lade...</div></div></div>';
-  $$('[data-s]', el).forEach(a => a.onclick = () => { const t = $('#' + a.dataset.s); if (t) t.scrollIntoView({behavior: 'smooth', block: 'start'}); });
-
-  api('/api/settings').then(s => {
-    $('#apSsid').value = s.apSsid; $('#apCh').value = s.apCh; $('#wUser').value = s.webUser; $('#wAuth').checked = s.authEnabled; $('#sSsid').value = s.staSsid;
-    paintSta(s.sta);
-  }).catch(() => {});
-  api('/api/wifi/scan').then(d => { $('#sList').innerHTML = d.nets.map(n => '<option value="' + esc(n.ssid) + '">').join(''); }).catch(() => {});
-  const paintSta = sta => {
-    const names = {idle: 'Nicht verbunden', connecting: 'Verbinde...', connected: 'Verbunden', failed: 'Verbindung fehlgeschlagen'};
-    $('#staInfo').innerHTML = '<div>Status</div><div><span class="tag ' + (sta.state === 'connected' ? 'ok' : (sta.state === 'failed' ? 'err' : '')) + '">' + names[sta.state] + '</span></div>' + (sta.state === 'connected' ? '<div>Netzwerk</div><div>' + esc(sta.ssid) + '</div><div>IP-Adresse</div><div class="mono">' + esc(sta.ip) + '</div><div>Signal</div><div>' + sta.rssi + ' dBm</div>' : '');
-  };
-  const sysPaint = () => {
-    if (!ST) return;
-    $('#sysInfo').innerHTML = '<div>Chip</div><div>' + esc(ST.chip.model) + ' Rev. ' + ST.chip.rev + '</div><div>CPU</div><div>' + ST.chip.mhz + ' MHz</div><div>Flash</div><div>' + fmtB(ST.mem.flash) + '</div><div>PSRAM</div><div>' + (ST.mem.psram ? fmtB(ST.mem.psram) : 'nicht erkannt') + '</div><div>Freier RAM</div><div>' + fmtB(ST.mem.free) + '</div><div>Laufzeit</div><div>' + fmtUp(ST.up) + '</div><div>Firmware</div><div>v' + esc(ST.fw) + '</div>';
-    if (ST.wifi) paintSta(ST.wifi.sta);
-  };
-  every(sysPaint, 3000);
-
-  $('#apSave').onclick = async () => {
-    const r = await act('/api/ap/save', {ssid: $('#apSsid').value, pass: $('#apPass').value, ch: $('#apCh').value});
-    if (r) { $('#apPass').value = ''; toast('Gespeichert. WLAN startet neu - bitte neu verbinden.', 'ok'); }
-  };
-  $('#wSave').onclick = async () => {
-    const r = await act('/api/settings/web', {user: $('#wUser').value, oldpass: $('#wOld').value, newpass: $('#wNew').value, auth: $('#wAuth').checked ? '1' : '0'});
-    if (r) { $('#wOld').value = ''; $('#wNew').value = ''; refreshStatus().catch(() => {}); }
-  };
-  $('#sGo').onclick = async () => { const r = await act('/api/sta/connect', {ssid: $('#sSsid').value, pass: $('#sPass').value}, 'Verbinde...'); if (r) $('#sPass').value = ''; };
-  $('#sOff').onclick = async () => { if (confirm('Heim-WLAN trennen und Zugangsdaten löschen?')) { await act('/api/sta/disconnect', {}, 'Getrennt'); $('#sSsid').value = ''; } };
-  $('#rst').onclick = doRestart;
-  $('#fac').onclick = async () => {
-    if (!confirm('ALLE Einstellungen (WLAN, Passwörter, Sperrliste) auf Werkseinstellungen zurücksetzen?')) return;
-    if (prompt('Zur Bestätigung RESET eintippen:') !== 'RESET') return;
-    if (await act('/api/system/factory', {confirm: 'RESET'}, false)) { setToken(''); waitForDevice('Werkseinstellungen werden hergestellt...'); }
-  };
-  initUpdate();
-  if (pending === 'web' || pending === 'ap') { const t = $(pending === 'web' ? '#s-web' : '#s-ap'); pending = null; setTimeout(() => t && t.scrollIntoView({behavior: 'smooth', block: 'start'}), 200); }
-};
-
-// ---- Firmware-Update (Abschnitt in den Einstellungen) ----
-function initUpdate() {
-  const body = $('#updBody');
-  const phaseTxt = {idle: '', checking: 'Suche nach Updates...', downloading: 'Firmware wird heruntergeladen...', installing: 'Firmware wird installiert...', done: 'Update erfolgreich – ESP32 startet neu...', error: ''};
-  let rebooting = false, prevPhase = null;
-  const paint = d => {
-    UP = d;
-    if (!$('#updBody')) return;
-    const active = d.phase === 'downloading' || d.phase === 'installing' || d.phase === 'done' || d.phase === 'checking';
-    let statusCls = d.phase === 'error' ? 'err' : (d.phase === 'done' ? 'ok' : (active ? 'acc' : ''));
-    let msg = d.msg || phaseTxt[d.phase] || '';
-    if (d.phase === 'downloading') msg = 'Firmware wird heruntergeladen... ' + d.pct + ' %';
-    const inet = d.internet === 1 ? '<span class="tag ok">Online</span>' : (d.internet === 0 ? '<span class="tag err">Offline</span>' : (d.staUp ? '<span class="tag ok">Heim-WLAN verbunden</span>' : '<span class="tag">Unbekannt</span>'));
-    const gh = d.internet === 1 && d.github === 'Verbunden' ? '<span class="tag ok">Verbunden</span>' : '<span class="tag ' + (d.github && d.github !== 'Noch nicht geprüft' ? 'err' : '') + '">' + esc(d.github) + '</span>';
-    body.innerHTML =
-      (!d.supported ? '<div class="banner warn"><span>Die Update-Funktion benötigt den ESP32-Core 3.3.12 oder neuer. Alle anderen Funktionen sind nicht betroffen.</span></div>' : '') +
-      (!d.configured ? '<div class="banner warn"><span>Es ist noch kein GitHub-Benutzer eingetragen. Trage <span class="mono">GITHUB_USER</span> und <span class="mono">GITHUB_REPO</span> am Anfang der .ino ein und lade sie neu hoch.</span></div>' : '') +
-      '<div class="kv"><div>Installierte Version</div><div><b>v' + esc(d.installed) + '</b></div>' +
-      '<div>Neueste Version</div><div>' + (d.checked ? '<b>v' + esc(d.latest) + '</b>' + (d.available ? ' <span class="tag acc">Update verfügbar</span>' : ' <span class="tag ok">aktuell</span>') + (d.date ? ' <span class="mut">veröffentlicht am ' + esc(d.date) + '</span>' : '') : '<span class="mut">noch nicht geprüft</span>') + '</div>' +
-      '<div>Internetstatus</div><div>' + inet + '</div><div>GitHub-Verbindung</div><div>' + gh + '</div>' +
-      '<div>Repository</div><div class="mono">' + esc(d.repo) + '</div>' +
-      '<div>Letzte Prüfung</div><div>' + (d.lastCheck ? esc(d.lastCheck) : '<span class="mut">nie</span>') + '</div>' +
-      (d.checked && d.available ? '<div>SHA-256</div><div>' + (d.hasSha ? '<span class="tag ok">Prüfsumme vorhanden</span>' : '<span class="tag err">fehlt</span>') + '</div>' : '') + '</div>' +
-      '<div class="bar" style="margin-top:16px"><button class="btn pri" id="uChk"' + (d.busy || !d.configured || !d.supported ? ' disabled' : '') + '>' + ic('refresh') + 'Nach Updates suchen</button><button class="btn" id="uInst"' + (d.canInstall ? '' : ' disabled') + '>' + ic('download') + 'Update installieren</button></div>' +
-      (active && d.phase !== 'checking' ? '<div class="prog' + (d.phase === 'downloading' ? '' : ' busy') + '"><i style="width:' + (d.phase === 'downloading' ? d.pct : 100) + '%"></i></div>' : '') +
-      (msg ? '<div style="margin-top:10px" class="' + (statusCls ? 'tag ' + statusCls : '') + '" id="uMsg">' + esc(msg) + '</div>' : '') +
-      (d.checked && d.available && d.notes ? '<h3 style="margin-top:16px">Changelog</h3><pre class="notes">' + esc(d.notes) + '</pre>' : '') +
-      '<div class="hint">Updates werden nur von <span class="mono">github.com/' + esc(d.repo) + '</span> per HTTPS geladen, mit SHA-256 geprüft und in die zweite Firmware-Partition geschrieben. Bei einem Fehler bleibt die aktuelle Firmware unverändert.</div>' +
-      '<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)"><h3>Manuell aktualisieren (ohne Internet)</h3><div class="bar" style="margin-top:8px"><input type="file" id="uFile" accept=".bin"><button class="btn" id="uUp">' + ic('upload') + 'Datei hochladen</button></div><div class="prog" id="uUpP" style="display:none"><i></i></div><div class="hint">Nur die Datei <span class="mono">…ino.bin</span> aus „Sketch → Kompilierte Binärdatei exportieren“ verwenden – nicht die Datei mit „merged“ im Namen.</div></div>';
-    const chk = $('#uChk'); if (chk) chk.onclick = async () => { chk.disabled = true; await act('/api/update/check', {}, false); poll(); };
-    const ins = $('#uInst'); if (ins) ins.onclick = async () => {
-      if (!confirm('Update auf v' + d.latest + ' installieren? Der ESP32 startet danach neu.')) return;
-      ins.disabled = true; await act('/api/update/install', {}, false); poll();
-    };
-    const up = $('#uUp'); if (up) up.onclick = manualUpload;
-    const justDone = d.phase === 'done' && prevPhase !== null && prevPhase !== 'done';
-    prevPhase = d.phase;
-    if (justDone && !rebooting && !/Demo/.test(d.msg)) { rebooting = true; waitForDevice('Update erfolgreich – ESP32 startet neu...'); }
-  };
-  const manualUpload = () => {
-    const f = $('#uFile').files[0];
-    if (!f) { toast('Bitte zuerst eine .bin-Datei wählen', 'err'); return; }
-    if (!/\.bin$/i.test(f.name) || /merged|bootloader|partitions/i.test(f.name)) { toast('Falsche Datei: bitte die ...ino.bin verwenden (nicht merged/bootloader/partitions).', 'err'); return; }
-    if (!confirm('Firmware "' + f.name + '" jetzt installieren?')) return;
-    const fd = new FormData(); fd.append('firmware', f, f.name);
-    const x = new XMLHttpRequest();
-    x.open('POST', '/api/update/upload');
-    x.setRequestHeader('X-Token', TOKEN);
-    const bar = $('#uUpP'); bar.style.display = '';
-    x.upload.onprogress = e => { if (e.lengthComputable) bar.firstChild.style.width = Math.round(e.loaded * 100 / e.total) + '%'; };
-    x.onload = () => {
-      let j = {}; try { j = JSON.parse(x.responseText); } catch (e) {}
-      if (x.status === 200 && j.ok) waitForDevice('Firmware installiert – ESP32 startet neu...');
-      else toast(j.error || 'Upload fehlgeschlagen', 'err');
-    };
-    x.onerror = () => toast('Upload fehlgeschlagen (Verbindung)', 'err');
-    x.send(fd);
-  };
-  let busyPoll = null;
-  const load = async () => { const d = await api('/api/update'); paint(d); return d; };
-  const poll = () => {
-    if (busyPoll) return;
-    busyPoll = setInterval(async () => {
-      try { const d = await load(); if (!d.busy && d.phase !== 'downloading' && d.phase !== 'installing' && d.phase !== 'checking') { clearInterval(busyPoll); busyPoll = null; } }
-      catch (e) { }
-    }, 800);
-    timers.push(busyPoll);
-  };
-  load().then(d => { if (d.busy || d.phase === 'downloading' || d.phase === 'installing' || d.phase === 'checking') poll(); }).catch(() => {});
-}
-
-// -------------------------------------------------------- Navigation / Start ---
-const PAGES = [['dashboard', 'Dashboard', 'home'], ['wifi', 'WLAN-Scanner', 'wifi'], ['channels', 'Kanäle', 'bars'], ['signal', 'Signal', 'activity'], ['myap', 'Mein WLAN', 'radio'], ['ble', 'Bluetooth', 'bt'], ['logs', 'Logs', 'list'], ['settings', 'Einstellungen', 'gear']];
-function route() {
-  if (!TOKEN && PUB.auth) return;
-  const id = (location.hash || '#dashboard').slice(1);
-  const p = PAGES.find(x => x[0] === id) || PAGES[0];
-  clearTimers();
-  if (curPage === 'signal' && p[0] !== 'signal') TRK.on = false;
-  curPage = p[0];
-  $$('#nav a').forEach(a => a.classList.toggle('on', a.dataset.p === curPage));
-  $('#pt').textContent = p[1];
-  document.title = p[1] + ' · ESP32 Network Toolbox';
-  const el = $('#view');
-  el.innerHTML = '';
-  VIEWS[curPage](el);
-  window.scrollTo(0, 0);
-  timers.push(setInterval(() => refreshStatus().catch(() => {}), 4000));
-}
-async function boot() {
-  try { PUB = await (await fetch('/api/public', {cache: 'no-store'})).json(); setConn(true); } catch (e) { setConn(false); setTimeout(boot, 3000); return; }
-  $('#foot').innerHTML = 'ESP32-S3 N16R8<br>Firmware v' + esc(PUB.fw);
-  setToken(TOKEN);
-  if (PUB.auth && !TOKEN) { showLogin(); return; }
-  try { await refreshStatus(); } catch (e) { if (e.message === 'Nicht angemeldet') return; }
-  route();
-}
-$('#nav').innerHTML = PAGES.map(p => '<a href="#' + p[0] + '" data-p="' + p[0] + '">' + ic(p[2]) + '<span>' + p[1] + '</span></a>').join('');
-$('#btnOut').onclick = async () => { try { await api('/api/logout', {}); } catch (e) {} setToken(''); clearTimers(); location.hash = ''; showLogin(); };
-window.addEventListener('hashchange', route);
-boot();
-</script>
-</body>
-</html>
-)HTMLPAGE";
+const char INDEX_HTML[] PROGMEM =
+"<!DOCTYPE html>\n"
+"<html lang=\"de\">\n"
+"<head>\n"
+"<meta charset=\"utf-8\">\n"
+"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n"
+"<meta name=\"theme-color\" content=\"#0b1220\">\n"
+"<title>ESP32 Network Toolbox</title>\n"
+"<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='%234f8cff'/%3E%3Cpath d='M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='12' cy='19' r='1.4' fill='white'/%3E%3C/svg%3E\">\n"
+"<style>\n"
+":root{--bg:#0b1220;--bg2:#0f1729;--card:#141d31;--card2:#1b2740;--line:#25324d;--tx:#e8eefb;--mut:#8fa0c0;--acc:#4f8cff;--ok:#2fd07f;--warn:#f5b942;--err:#ff5d6c;--r:16px}\n"
+"*{box-sizing:border-box}\n"
+"html,body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif;-webkit-text-size-adjust:100%}\n"
+"body{min-height:100vh}\n"
+"h1,h2,h3{margin:0;font-weight:650}\n"
+"h2{font-size:17px}\n"
+"h3{font-size:15px;color:var(--mut);font-weight:600}\n"
+"a{color:var(--acc)}\n"
+".ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:middle}\n"
+".sprite{position:absolute;width:0;height:0;overflow:hidden}\n"
+".app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}\n"
+".side{position:sticky;top:0;height:100vh;padding:18px 12px;background:var(--bg2);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:4px}\n"
+".brand{display:flex;align-items:center;gap:10px;padding:6px 10px 18px;font-weight:700;font-size:16px}\n"
+".brand i{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,#4f8cff,#7a5cff);color:#fff}\n"
+".nav{display:flex;flex-direction:column;gap:4px}\n"
+".nav a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;color:var(--mut);text-decoration:none;cursor:pointer;white-space:nowrap}\n"
+".nav a:hover{background:rgba(255,255,255,.04);color:var(--tx)}\n"
+".nav a.on{background:rgba(79,140,255,.17);color:#fff}\n"
+".foot{margin-top:auto;padding:10px;color:var(--mut);font-size:12px}\n"
+"main{padding:22px 26px 40px;min-width:0;max-width:1200px;width:100%}\n"
+".top{display:flex;align-items:center;gap:12px;margin-bottom:18px}\n"
+".top h1{font-size:22px;flex:1}\n"
+".dot{width:10px;height:10px;border-radius:50%;background:var(--ok);display:inline-block;flex:none}\n"
+".dot.off{background:var(--err)}\n"
+".dot.warn{background:var(--warn)}\n"
+".dot.busy{background:var(--acc)}\n"
+".card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;min-width:0}\n"
+".card+.card,.grid+.card,.card+.grid,.banner+.card{margin-top:14px}\n"
+".grid{display:grid;gap:14px}\n"
+".grid>.card{margin-top:0!important}\n"
+".g4{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}\n"
+".g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}\n"
+".stat .lbl{color:var(--mut);font-size:13px;display:flex;align-items:center;gap:8px}\n"
+".stat .val{font-size:26px;font-weight:700;margin:6px 0 2px;display:flex;align-items:center;gap:8px}\n"
+".stat .sub{color:var(--mut);font-size:12.5px;min-height:18px}\n"
+".meter{height:8px;border-radius:9px;background:#0e1628;overflow:hidden;margin-top:10px}\n"
+".meter i{display:block;height:100%;border-radius:9px;background:var(--acc);transition:width .4s}\n"
+".meter i.mid{background:var(--warn)}.meter i.hi{background:var(--err)}\n"
+".bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}\n"
+".btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--card2);color:var(--tx);padding:10px 16px;border-radius:12px;font:inherit;font-weight:550;cursor:pointer;touch-action:manipulation}\n"
+".btn:hover{border-color:#3a4c73}\n"
+".btn.pri{background:var(--acc);border-color:var(--acc);color:#fff}\n"
+".btn.dng{background:rgba(255,93,108,.13);border-color:rgba(255,93,108,.4);color:#ff9aa4}\n"
+".btn.sm{padding:6px 11px;font-size:13px;border-radius:10px}\n"
+".btn:disabled{opacity:.45;cursor:not-allowed}\n"
+"input,select{background:#0e1628;border:1px solid var(--line);color:var(--tx);border-radius:10px;padding:10px 12px;font:inherit;min-width:0;max-width:100%}\n"
+"input:focus,select:focus{outline:2px solid rgba(79,140,255,.5);border-color:var(--acc)}\n"
+"input[type=checkbox]{width:18px;height:18px;padding:0;accent-color:var(--acc)}\n"
+"label{display:block;color:var(--mut);font-size:13px;margin:12px 0 5px}\n"
+".filters{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}\n"
+".srch{position:relative;flex:1 1 200px}\n"
+".srch .ic{position:absolute;left:11px;top:11px;color:var(--mut);width:18px;height:18px}\n"
+".srch input{width:100%;padding-left:36px}\n"
+".scroll{overflow-x:auto;padding:6px 6px}\n"
+".tbl{width:100%;border-collapse:collapse;min-width:460px}\n"
+".tbl th{color:var(--mut);font-weight:600;font-size:12.5px;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}\n"
+".tbl td{padding:11px 12px;border-bottom:1px solid rgba(37,50,77,.6);vertical-align:middle}\n"
+".tbl tr:last-child td{border-bottom:0}\n"
+".mut{color:var(--mut)}\n"
+".mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px}\n"
+".sig{display:flex;align-items:center;gap:8px;min-width:120px}\n"
+".sig b{font-weight:600;min-width:56px}\n"
+".sig span{flex:1;height:7px;background:#0e1628;border-radius:9px;overflow:hidden;min-width:40px}\n"
+".sig span i{display:block;height:100%;border-radius:9px}\n"
+".tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:rgba(143,160,192,.15);color:var(--mut);white-space:nowrap}\n"
+".tag.ok{background:rgba(47,208,127,.15);color:var(--ok)}\n"
+".tag.warn{background:rgba(245,185,66,.15);color:var(--warn)}\n"
+".tag.err{background:rgba(255,93,108,.15);color:var(--err)}\n"
+".tag.acc{background:rgba(79,140,255,.16);color:#8fb4ff}\n"
+".banner{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 16px;border-radius:14px;margin-bottom:12px;border:1px solid;font-size:14px}\n"
+".banner.warn{background:rgba(245,185,66,.1);border-color:rgba(245,185,66,.4);color:#ffd88a}\n"
+".banner.ok{background:rgba(47,208,127,.1);border-color:rgba(47,208,127,.4);color:#8ff0bd}\n"
+".banner.info{background:rgba(79,140,255,.1);border-color:rgba(79,140,255,.4);color:#a9c5ff}\n"
+".banner span{flex:1;min-width:200px}\n"
+".chart{display:flex;align-items:flex-end;gap:6px;height:190px;padding:6px 0 0}\n"
+".chart .col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}\n"
+".chart .col b{font-size:12px;color:var(--mut);margin-bottom:4px;font-weight:600}\n"
+".chart .col .bx{width:100%;max-width:38px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#6aa0ff,#3563d4);min-height:3px;transition:height .4s}\n"
+".chart .col .bx.hot{background:linear-gradient(180deg,#ffcf6b,#e0902a)}\n"
+".chart .col .bx.zero{background:#1d2a45}\n"
+".chart .col span{font-size:12px;margin-top:6px;color:var(--mut)}\n"
+".chart .col.rec span{color:var(--ok);font-weight:700}\n"
+"canvas{width:100%;height:260px;display:block;background:#0e1628;border-radius:12px}\n"
+".kv{display:grid;grid-template-columns:minmax(120px,auto) 1fr;gap:9px 16px}\n"
+".kv div:nth-child(odd){color:var(--mut)}\n"
+".kv div:nth-child(even){word-break:break-word}\n"
+".prog{height:14px;border-radius:99px;background:#0e1628;overflow:hidden;margin:12px 0 6px}\n"
+".prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#4f8cff,#7aa8ff);border-radius:99px;transition:width .35s}\n"
+".prog.busy i{background:repeating-linear-gradient(45deg,#4f8cff 0 12px,#6b9dff 12px 24px);background-size:34px 34px;animation:mv 1s linear infinite}\n"
+"@keyframes mv{to{background-position:34px 0}}\n"
+"pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-radius:12px;padding:12px 14px;margin:8px 0 0;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;max-height:220px;overflow:auto}\n"
+".log{font:13px/1.55 ui-monospace,Menlo,Consolas,monospace;max-height:70vh;overflow:auto}\n"
+".log div{padding:3px 0;border-bottom:1px solid rgba(37,50,77,.5);display:flex;gap:12px}\n"
+".log .t{color:var(--mut);flex:none}\n"
+".log .l1{color:var(--warn)}.log .l2{color:var(--err)}\n"
+".hint{color:var(--mut);font-size:13px;margin-top:10px}\n"
+".sec{display:flex;align-items:center;gap:10px;margin-bottom:12px}\n"
+".sec .ic{color:var(--acc)}\n"
+".sub-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}\n"
+".sub-nav a{padding:7px 14px;border-radius:99px;background:var(--card);border:1px solid var(--line);color:var(--mut);text-decoration:none;font-size:13.5px;cursor:pointer}\n"
+".sub-nav a:hover{color:var(--tx)}\n"
+".ovl{position:fixed;inset:0;background:rgba(5,9,18,.82);display:grid;place-items:center;z-index:50;padding:16px;backdrop-filter:blur(6px)}\n"
+".ovl .card{width:100%;max-width:380px}\n"
+".toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#1e2c49;border:1px solid var(--line);padding:11px 18px;border-radius:12px;z-index:60;max-width:92vw;box-shadow:0 8px 30px rgba(0,0,0,.4)}\n"
+".toast.err{border-color:var(--err);color:#ffb0b8}.toast.ok{border-color:var(--ok)}\n"
+".empty{text-align:center;color:var(--mut);padding:26px 10px}\n"
+".pill-row{display:flex;flex-wrap:wrap;gap:8px}\n"
+".act{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}\n"
+".act .btn{justify-content:flex-start;text-align:left;padding:13px 16px}\n"
+"@media(max-width:860px){\n"
+"  .app{grid-template-columns:minmax(0,1fr)}\n"
+"  .side{position:fixed;top:auto;bottom:0;left:0;right:0;height:auto;flex-direction:row;overflow-x:auto;padding:6px 8px calc(6px + env(safe-area-inset-bottom));border-right:0;border-top:1px solid var(--line);z-index:20;gap:2px}\n"
+"  .brand,.foot{display:none}\n"
+"  .nav{flex-direction:row;gap:2px}\n"
+"  .nav a{flex-direction:column;gap:3px;font-size:11px;padding:7px 11px;min-width:66px;text-align:center}\n"
+"  main{padding:16px 14px 96px}\n"
+"  .hm{display:none}\n"
+"  .toast{bottom:100px}\n"
+"}\n"
+"</style>\n"
+"</head>\n"
+"<body>\n"
+"<svg class=\"sprite\" aria-hidden=\"true\"><defs>\n"
+"<symbol id=\"i-home\" viewBox=\"0 0 24 24\"><path d=\"M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z\"/></symbol>\n"
+"<symbol id=\"i-wifi\" viewBox=\"0 0 24 24\"><path d=\"M5 12.55a11 11 0 0 1 14.08 0\"/><path d=\"M1.42 9a16 16 0 0 1 21.16 0\"/><path d=\"M8.53 16.11a6 6 0 0 1 6.95 0\"/><path d=\"M12 20h.01\"/></symbol>\n"
+"<symbol id=\"i-bars\" viewBox=\"0 0 24 24\"><path d=\"M12 20V10M18 20V4M6 20v-4\"/></symbol>\n"
+"<symbol id=\"i-activity\" viewBox=\"0 0 24 24\"><path d=\"M22 12h-4l-3 9L9 3l-3 9H2\"/></symbol>\n"
+"<symbol id=\"i-radio\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"2\"/><path d=\"M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14\"/></symbol>\n"
+"<symbol id=\"i-bt\" viewBox=\"0 0 24 24\"><path d=\"M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11\"/></symbol>\n"
+"<symbol id=\"i-list\" viewBox=\"0 0 24 24\"><path d=\"M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01\"/></symbol>\n"
+"<symbol id=\"i-gear\" viewBox=\"0 0 24 24\"><path d=\"M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6\"/></symbol>\n"
+"<symbol id=\"i-power\" viewBox=\"0 0 24 24\"><path d=\"M18.36 6.64a9 9 0 1 1-12.73 0M12 2v10\"/></symbol>\n"
+"<symbol id=\"i-refresh\" viewBox=\"0 0 24 24\"><path d=\"M23 4v6h-6\"/><path d=\"M20.49 15a9 9 0 1 1-2.12-9.36L23 10\"/></symbol>\n"
+"<symbol id=\"i-download\" viewBox=\"0 0 24 24\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><path d=\"M7 10l5 5 5-5M12 15V3\"/></symbol>\n"
+"<symbol id=\"i-search\" viewBox=\"0 0 24 24\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M21 21l-4.35-4.35\"/></symbol>\n"
+"<symbol id=\"i-play\" viewBox=\"0 0 24 24\"><path d=\"M6 4l14 8-14 8z\"/></symbol>\n"
+"<symbol id=\"i-stop\" viewBox=\"0 0 24 24\"><rect x=\"5\" y=\"5\" width=\"14\" height=\"14\" rx=\"2\"/></symbol>\n"
+"<symbol id=\"i-trash\" viewBox=\"0 0 24 24\"><path d=\"M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2\"/></symbol>\n"
+"<symbol id=\"i-lock\" viewBox=\"0 0 24 24\"><rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"/><path d=\"M8 11V7a4 4 0 0 1 8 0v4\"/></symbol>\n"
+"<symbol id=\"i-unlock\" viewBox=\"0 0 24 24\"><rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"/><path d=\"M8 11V7a4 4 0 0 1 7.5-2\"/></symbol>\n"
+"<symbol id=\"i-out\" viewBox=\"0 0 24 24\"><path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9\"/></symbol>\n"
+"<symbol id=\"i-flask\" viewBox=\"0 0 24 24\"><path d=\"M9 3h6M10 3v6L4.5 19a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 9V3\"/></symbol>\n"
+"<symbol id=\"i-users\" viewBox=\"0 0 24 24\"><path d=\"M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/></symbol>\n"
+"<symbol id=\"i-cpu\" viewBox=\"0 0 24 24\"><rect x=\"5\" y=\"5\" width=\"14\" height=\"14\" rx=\"2\"/><rect x=\"9\" y=\"9\" width=\"6\" height=\"6\"/><path d=\"M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4\"/></symbol>\n"
+"<symbol id=\"i-shield\" viewBox=\"0 0 24 24\"><path d=\"M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z\"/></symbol>\n"
+"<symbol id=\"i-globe\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20\"/></symbol>\n"
+"<symbol id=\"i-upload\" viewBox=\"0 0 24 24\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12\"/></symbol>\n"
+"</defs></svg>\n"
+"\n"
+"<div class=\"app\">\n"
+"  <aside class=\"side\">\n"
+"    <div class=\"brand\"><i><svg class=\"ic\"><use href=\"#i-wifi\"/></svg></i><span>Network Toolbox</span></div>\n"
+"    <nav class=\"nav\" id=\"nav\"></nav>\n"
+"    <div class=\"foot\" id=\"foot\">ESP32-S3 N16R8</div>\n"
+"  </aside>\n"
+"  <main>\n"
+"    <div class=\"top\"><h1 id=\"pt\">Dashboard</h1><span id=\"conn\" class=\"dot\" title=\"Verbindung\"></span><button class=\"btn sm\" id=\"btnOut\" title=\"Abmelden\" style=\"display:none\"><svg class=\"ic\"><use href=\"#i-out\"/></svg><span class=\"hm\">Abmelden</span></button></div>\n"
+"    <div id=\"banners\"></div>\n"
+"    <div id=\"view\"></div>\n"
+"  </main>\n"
+"</div>\n"
+"<div id=\"ovl\"></div>\n"
+"\n"
+"<script>\n"
+"\"use strict\";\n"
+"// ---------------------------------------------------------------- Helfer ---\n"
+"const $ = (s, r) => (r || document).querySelector(s);\n"
+"const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));\n"
+"const esc = s => String(s == null ? '' : s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]));\n"
+"const ic = n => '<svg class=\"ic\"><use href=\"#i-' + n + '\"/></svg>';\n"
+"const sleep = ms => new Promise(r => setTimeout(r, ms));\n"
+"const clamp = (v, a, b) => Math.max(a, Math.min(b, v));\n"
+"let TOKEN = '';\n"
+"try { TOKEN = sessionStorage.getItem('tok') || ''; } catch (e) {}\n"
+"let PUB = {auth: true, fw: '', demo: false};\n"
+"let ST = null;\n"
+"let timers = [];\n"
+"let curPage = '';\n"
+"let pending = null;\n"
+"let connOk = true;\n"
+"\n"
+"function setToken(t) {\n"
+"  TOKEN = t || '';\n"
+"  try { if (TOKEN) sessionStorage.setItem('tok', TOKEN); else sessionStorage.removeItem('tok'); } catch (e) {}\n"
+"  $('#btnOut').style.display = (TOKEN && PUB.auth) ? '' : 'none';\n"
+"}\n"
+"function setConn(ok) {\n"
+"  connOk = ok;\n"
+"  $('#conn').className = 'dot' + (ok ? '' : ' off');\n"
+"  $('#conn').title = ok ? 'Verbunden' : 'Keine Verbindung zum ESP32';\n"
+"}\n"
+"async function api(path, data) {\n"
+"  const opt = {headers: {'X-Token': TOKEN}, cache: 'no-store'};\n"
+"  if (data !== undefined) { opt.method = 'POST'; opt.body = new URLSearchParams(data); }\n"
+"  let r;\n"
+"  try { r = await fetch(path, opt); } catch (e) { setConn(false); throw new Error('Keine Verbindung zum ESP32'); }\n"
+"  setConn(true);\n"
+"  if (r.status === 401 && path !== '/api/login') { showLogin(); throw new Error('Nicht angemeldet'); }\n"
+"  let j = {};\n"
+"  try { j = await r.json(); } catch (e) {}\n"
+"  if (!r.ok || j.ok === false) throw new Error(j.error || ('Fehler ' + r.status));\n"
+"  return j;\n"
+"}\n"
+"let toastT = 0;\n"
+"function toast(msg, type) {\n"
+"  let t = $('#toast');\n"
+"  if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }\n"
+"  t.className = 'toast ' + (type || '');\n"
+"  t.textContent = msg;\n"
+"  t.style.display = '';\n"
+"  clearTimeout(toastT);\n"
+"  toastT = setTimeout(() => { t.style.display = 'none'; }, type === 'err' ? 5000 : 2800);\n"
+"}\n"
+"async function act(path, data, okMsg) {\n"
+"  try { const r = await api(path, data || {}); if (okMsg !== false) toast(okMsg || r.msg || 'OK', 'ok'); return r; }\n"
+"  catch (e) { toast(e.message, 'err'); return null; }\n"
+"}\n"
+"function clearTimers() { timers.forEach(clearInterval); timers = []; }\n"
+"function every(fn, ms) { const w = async () => { try { await fn(); } catch (e) {} }; w(); const t = setInterval(w, ms); timers.push(t); return t; }\n"
+"function fmtB(n) {\n"
+"  n = Number(n) || 0;\n"
+"  if (n >= 1048576) return (n / 1048576).toFixed(n >= 10485760 ? 0 : 1) + ' MB';\n"
+"  if (n >= 1024) return (n / 1024).toFixed(0) + ' KB';\n"
+"  return n + ' B';\n"
+"}\n"
+"function fmtUp(s) {\n"
+"  s = Number(s) || 0;\n"
+"  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;\n"
+"  const p = v => String(v).padStart(2, '0');\n"
+"  return (d ? d + ' T ' : '') + p(h) + ':' + p(m) + ':' + p(x);\n"
+"}\n"
+"function pctColor(p) { return p >= 90 ? 'hi' : (p >= 70 ? 'mid' : ''); }\n"
+"function sigColor(r) { return r >= -60 ? 'var(--ok)' : (r >= -75 ? 'var(--warn)' : 'var(--err)'); }\n"
+"function sigPct(r) { return clamp(Math.round((r + 100) * 2), 4, 100); }\n"
+"function sigBar(r) {\n"
+"  return '<div class=\"sig\"><b>' + r + ' dBm</b><span><i style=\"width:' + sigPct(r) + '%;background:' + sigColor(r) + '\"></i></span></div>';\n"
+"}\n"
+"function go(p) { location.hash = '#' + p; }\n"
+"function meter(p) { return '<div class=\"meter\"><i class=\"' + pctColor(p) + '\" style=\"width:' + clamp(p, 0, 100) + '%\"></i></div>'; }\n"
+"\n"
+"// ----------------------------------------------------------------- Login ---\n"
+"function showLogin() {\n"
+"  setToken('');\n"
+"  clearTimers();\n"
+"  if ($('#login')) return;\n"
+"  $('#ovl').innerHTML = '<div class=\"ovl\" id=\"login\"><form class=\"card\" id=\"lf\" autocomplete=\"on\"><div class=\"sec\">' + ic('lock') + '<h2>Anmelden</h2></div>' +\n"
+"    '<label>Benutzername</label><input id=\"lu\" name=\"username\" autocomplete=\"username\" autocapitalize=\"none\" style=\"width:100%\">' +\n"
+"    '<label>Passwort</label><input id=\"lp\" name=\"password\" type=\"password\" autocomplete=\"current-password\" style=\"width:100%\">' +\n"
+"    '<div id=\"lerr\" class=\"hint\" style=\"color:var(--err);min-height:20px\"></div>' +\n"
+"    '<button class=\"btn pri\" style=\"width:100%;margin-top:6px\" type=\"submit\">Anmelden</button></form></div>';\n"
+"  $('#lu').focus();\n"
+"  $('#lf').onsubmit = async ev => {\n"
+"    ev.preventDefault();\n"
+"    try {\n"
+"      const r = await api('/api/login', {user: $('#lu').value, pass: $('#lp').value});\n"
+"      setToken(r.token);\n"
+"      $('#ovl').innerHTML = '';\n"
+"      boot();\n"
+"    } catch (e) { $('#lerr').textContent = e.message; }\n"
+"  };\n"
+"}\n"
+"\n"
+"// --------------------------------------------------- Banner & Statusleiste ---\n"
+"function paintBanners() {\n"
+"  if (!ST) return;\n"
+"  let h = '';\n"
+"  if (ST.demo) h += '<div class=\"banner info\">' + ic('flask') + '<span><b>DEMO-Modus:</b> WLAN-, BLE- und Update-Daten sind simuliert.</span></div>';\n"
+"  if (ST.notice) h += '<div class=\"banner ok\">' + ic('download') + '<span>' + esc(ST.notice) + '</span><button class=\"btn sm\" id=\"bnDismiss\">OK</button></div>';\n"
+"  if (ST.warn && ST.warn.defaultWeb && ST.auth) h += '<div class=\"banner warn\">' + ic('shield') + '<span><b>Sicherheitshinweis:</b> Es wird noch das Standard-Passwort des Webinterfaces verwendet. Bitte jetzt ändern.</span><button class=\"btn sm\" id=\"bnPw\">Passwort ändern</button></div>';\n"
+"  if (ST.warn && ST.warn.defaultAp) h += '<div class=\"banner warn\">' + ic('wifi') + '<span><b>Hinweis:</b> Das Standard-WLAN-Passwort ist noch aktiv. Bitte unter Einstellungen ändern.</span><button class=\"btn sm\" id=\"bnAp\">WLAN-Passwort ändern</button></div>';\n"
+"  const b = $('#banners');\n"
+"  if (b.dataset.h !== h) {\n"
+"    b.dataset.h = h;\n"
+"    b.innerHTML = h;\n"
+"    const d = $('#bnDismiss'); if (d) d.onclick = async () => { await act('/api/notice/dismiss', {}, false); ST.notice = ''; paintBanners(); };\n"
+"    const p = $('#bnPw'); if (p) p.onclick = () => { pending = 'web'; go('settings'); };\n"
+"    const a = $('#bnAp'); if (a) a.onclick = () => { pending = 'ap'; go('settings'); };\n"
+"  }\n"
+"}\n"
+"async function refreshStatus() {\n"
+"  ST = await api('/api/status');\n"
+"  paintBanners();\n"
+"  if (curPage === 'dashboard') paintDash();\n"
+"}\n"
+"\n"
+"// -------------------------------------------------------- Neustart-Warten ---\n"
+"async function waitForDevice(text) {\n"
+"  clearTimers();\n"
+"  $('#ovl').innerHTML = '<div class=\"ovl\"><div class=\"card\" style=\"text-align:center\">' + ic('refresh') + '<h2 style=\"margin:10px 0 6px\">' + esc(text || 'ESP32 startet neu...') + '</h2><div class=\"hint\">Diese Seite lädt automatisch neu. Falls nicht: WLAN-Verbindung prüfen und die Seite neu laden.</div></div></div>';\n"
+"  await sleep(4000);\n"
+"  for (let i = 0; i < 90; i++) {\n"
+"    try {\n"
+"      const r = await fetch('/api/public', {cache: 'no-store'});\n"
+"      if (r.ok) { location.reload(); return; }\n"
+"    } catch (e) {}\n"
+"    await sleep(1500);\n"
+"  }\n"
+"  $('#ovl').innerHTML = '<div class=\"ovl\"><div class=\"card\"><h2>Keine Verbindung</h2><div class=\"hint\">Verbinde dich wieder mit dem WLAN des ESP32 und lade die Seite neu.</div><button class=\"btn pri\" style=\"margin-top:12px\" onclick=\"location.reload()\">Neu laden</button></div></div>';\n"
+"}\n"
+"async function doRestart() {\n"
+"  if (!confirm('ESP32 jetzt neu starten?')) return;\n"
+"  if (await act('/api/system/restart', {}, false)) waitForDevice('ESP32 startet neu...');\n"
+"}\n"
+"\n"
+"// ------------------------------------------------------------- Dashboard ---\n"
+"const VIEWS = {};\n"
+"function statCard(icon, label, val, sub, extra) {\n"
+"  return '<div class=\"card stat\"><div class=\"lbl\">' + ic(icon) + label + '</div><div class=\"val\">' + val + '</div><div class=\"sub\">' + (sub || '') + '</div>' + (extra || '') + '</div>';\n"
+"}\n"
+"function paintDash() {\n"
+"  const el = $('#dashbody');\n"
+"  if (!el || !ST) return;\n"
+"  const s = ST, w = s.wifi, m = s.mem;\n"
+"  const ramP = m.heap ? Math.round((m.heap - m.free) * 100 / m.heap) : 0;\n"
+"  const psP = m.psram ? Math.round((m.psram - m.psramFree) * 100 / m.psram) : 0;\n"
+"  const flP = m.flash ? Math.round(m.sketch * 100 / m.flash) : 0;\n"
+"  let wl, wc;\n"
+"  if (w.test) { wl = 'Testmodus'; wc = 'warn'; } else if (w.ap) { wl = 'Aktiv'; wc = ''; } else { wl = 'Gestoppt'; wc = 'off'; }\n"
+"  let bl = 'Bereit', bc = '';\n"
+"  if (s.ble.state === 'scanning') { bl = 'Scannt...'; bc = 'busy'; } else if (s.ble.state === 'error') { bl = 'Fehler'; bc = 'off'; }\n"
+"  let internet = w.sta.state === 'connected' ? 'Heim-WLAN: ' + esc(w.sta.ssid) : (w.sta.ssid ? 'Heim-WLAN: ' + w.sta.state : 'Kein Heim-WLAN (offline)');\n"
+"  el.innerHTML =\n"
+"    '<div class=\"card\" style=\"display:flex;gap:16px;align-items:center;flex-wrap:wrap\"><div style=\"width:52px;height:52px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,#4f8cff,#7a5cff)\">' + ic('cpu').replace('class=\"ic\"', 'class=\"ic\" style=\"width:28px;height:28px\"') + '</div>' +\n"
+"    '<div style=\"flex:1;min-width:200px\"><h2>' + esc(s.chip.model) + ' &middot; N16R8</h2><div class=\"mut\">' + esc(s.board) + ' &middot; Firmware v' + esc(s.fw) + ' &middot; Laufzeit ' + fmtUp(s.up) + '</div></div>' +\n"
+"    '<span class=\"tag acc\">' + esc(s.chip.mhz) + ' MHz &middot; ' + esc(s.chip.cores) + ' Kerne</span></div>' +\n"
+"    '<div class=\"grid g4\" style=\"margin-top:14px\">' +\n"
+"    statCard('wifi', 'WLAN', '<span class=\"dot ' + wc + '\"></span>' + wl, esc(w.ssid || '-') + ' &middot; Kanal ' + w.ch) +\n"
+"    statCard('bt', 'BLE', '<span class=\"dot ' + bc + '\"></span>' + bl, s.ble.found + ' Geräte gefunden') +\n"
+"    statCard('cpu', 'RAM', ramP + ' %', fmtB(m.heap - m.free) + ' von ' + fmtB(m.heap), meter(ramP)) +\n"
+"    statCard('cpu', 'PSRAM', m.psram ? psP + ' %' : 'n/a', m.psram ? fmtB(m.psram - m.psramFree) + ' von ' + fmtB(m.psram) : 'nicht erkannt (Einstellung \"OPI PSRAM\"?)', m.psram ? meter(psP) : '') +\n"
+"    statCard('download', 'Flash', flP + ' %', 'Programm ' + fmtB(m.sketch) + ' von ' + fmtB(m.flash), meter(flP)) +\n"
+"    statCard('users', 'Geräte am AP', w.clients, 'verbunden mit eigenem WLAN') +\n"
+"    statCard('wifi', 'Gefundene WLANs', w.found, w.scanning ? 'Scan läuft...' : 'aus letztem Scan') +\n"
+"    statCard('globe', 'Internet', w.sta.state === 'connected' ? 'Online' : 'Offline', internet) +\n"
+"    '</div>' +\n"
+"    '<div class=\"card\"><div class=\"sec\">' + ic('cpu') + '<h2>Systeminformationen</h2></div><div class=\"kv\">' +\n"
+"    '<div>Chip-Modell</div><div>' + esc(s.chip.model) + ' (Revision ' + esc(s.chip.rev) + ')</div>' +\n"
+"    '<div>CPU</div><div>' + esc(s.chip.mhz) + ' MHz, ' + esc(s.chip.cores) + ' Kerne</div>' +\n"
+"    '<div>Flash</div><div>' + fmtB(m.flash) + '</div>' +\n"
+"    '<div>PSRAM</div><div>' + (m.psram ? fmtB(m.psram) : 'nicht erkannt') + '</div>' +\n"
+"    '<div>Freier RAM</div><div>' + fmtB(m.free) + ' (Minimum seit Start: ' + fmtB(m.minFree) + ')</div>' +\n"
+"    '<div>Temperatur</div><div>' + Number(s.chip.temp).toFixed(1) + ' °C</div>' +\n"
+"    '<div>Laufzeit</div><div>' + fmtUp(s.up) + '</div>' +\n"
+"    '<div>Firmware</div><div>v' + esc(s.fw) + '</div>' +\n"
+"    '<div>MAC</div><div class=\"mono\">' + esc(s.chip.mac) + '</div>' +\n"
+"    '<div>ESP-IDF / Core</div><div>' + esc(s.chip.sdk) + ' / ' + esc(s.chip.core) + '</div></div></div>';\n"
+"}\n"
+"VIEWS.dashboard = el => {\n"
+"  el.innerHTML = '<div id=\"dashbody\"><div class=\"card empty\">Lade...</div></div>' +\n"
+"    '<div class=\"card\"><div class=\"sec\">' + ic('play') + '<h2>Schnellaktionen</h2></div><div class=\"act\">' +\n"
+"    '<button class=\"btn\" data-q=\"wifi\">' + ic('wifi') + 'WLAN scannen</button>' +\n"
+"    '<button class=\"btn\" data-q=\"ble\">' + ic('bt') + 'BLE scannen</button>' +\n"
+"    '<button class=\"btn\" data-q=\"apstart\">' + ic('radio') + 'Eigenes WLAN starten</button>' +\n"
+"    '<button class=\"btn\" data-q=\"test\">' + ic('flask') + 'Test-WLANs starten</button>' +\n"
+"    '<button class=\"btn\" data-q=\"logs\">' + ic('list') + 'Logs anzeigen</button>' +\n"
+"    '<button class=\"btn\" data-q=\"settings\">' + ic('gear') + 'Einstellungen</button>' +\n"
+"    '<button class=\"btn dng\" data-q=\"restart\">' + ic('power') + 'ESP32 neu starten</button></div></div>';\n"
+"  paintDash();\n"
+"  $$('[data-q]', el).forEach(b => b.onclick = async () => {\n"
+"    const q = b.dataset.q;\n"
+"    if (q === 'wifi') { pending = 'scan'; go('wifi'); }\n"
+"    else if (q === 'ble') { pending = 'scan'; go('ble'); }\n"
+"    else if (q === 'apstart') { await act('/api/ap/start', {}, 'Eigenes WLAN gestartet'); refreshStatus().catch(() => {}); }\n"
+"    else if (q === 'test') go('myap');\n"
+"    else if (q === 'logs') go('logs');\n"
+"    else if (q === 'settings') go('settings');\n"
+"    else if (q === 'restart') doRestart();\n"
+"  });\n"
+"};\n"
+"\n"
+"// ----------------------------------------------------------- WLAN-Scanner ---\n"
+"let WF = {nets: [], state: 'idle', age: -1};\n"
+"const ENC_OPTS = ['', 'Offen', 'WEP', 'WPA', 'WPA2', 'WPA3', 'Enterprise'];\n"
+"function encMatch(a, f) {\n"
+"  if (!f) return true;\n"
+"  if (f === 'Offen') return a === 'Offen';\n"
+"  if (f === 'Enterprise') return a.indexOf('Enterprise') >= 0;\n"
+"  return a.indexOf(f) >= 0;\n"
+"}\n"
+"function encTag(a) {\n"
+"  const c = a === 'Offen' ? 'err' : (a === 'WEP' || a === 'WPA' ? 'warn' : (a.indexOf('WPA3') >= 0 ? 'ok' : ''));\n"
+"  return '<span class=\"tag ' + c + '\">' + esc(a) + '</span>';\n"
+"}\n"
+"VIEWS.wifi = el => {\n"
+"  el.innerHTML =\n"
+"    '<div class=\"card\"><div class=\"bar\"><button class=\"btn pri\" id=\"wsStart\">' + ic('play') + 'Scan starten</button><button class=\"btn\" id=\"wsStop\">' + ic('stop') + 'Scan stoppen</button><span id=\"wsInfo\" class=\"mut\"></span></div>' +\n"
+"    '<div class=\"filters\"><div class=\"srch\">' + ic('search') + '<input id=\"fq\" placeholder=\"SSID suchen...\" autocomplete=\"off\"></div>' +\n"
+"    '<select id=\"fsig\"><option value=\"-200\">Signal: alle</option><option value=\"-50\">stärker als -50 dBm</option><option value=\"-60\">stärker als -60 dBm</option><option value=\"-70\">stärker als -70 dBm</option><option value=\"-80\">stärker als -80 dBm</option></select>' +\n"
+"    '<select id=\"fch\"><option value=\"0\">Kanal: alle</option>' + Array.from({length: 14}, (_, i) => '<option value=\"' + (i + 1) + '\">Kanal ' + (i + 1) + '</option>').join('') + '</select>' +\n"
+"    '<select id=\"fenc\">' + ENC_OPTS.map(o => '<option value=\"' + o + '\">' + (o || 'Verschlüsselung: alle') + '</option>').join('') + '</select>' +\n"
+"    '<select id=\"fsort\"><option value=\"strong\">Sortierung: stärkstes Signal</option><option value=\"weak\">schwächstes Signal</option><option value=\"ch\">Kanal</option><option value=\"name\">Name</option></select></div></div>' +\n"
+"    '<div class=\"card scroll\"><table class=\"tbl\"><thead><tr><th>Name (SSID)</th><th>Signal</th><th>Kanal</th><th>Verschlüsselung</th><th class=\"hm\">BSSID</th><th></th></tr></thead><tbody id=\"wtb\"></tbody></table></div>';\n"
+"  const paint = () => {\n"
+"    const q = $('#fq').value.trim().toLowerCase(), sig = +$('#fsig').value, ch = +$('#fch').value, enc = $('#fenc').value, so = $('#fsort').value;\n"
+"    let list = WF.nets.filter(n => n.rssi >= sig && (!ch || n.ch === ch) && encMatch(n.auth, enc) && (!q || n.ssid.toLowerCase().indexOf(q) >= 0 || n.bssid.toLowerCase().indexOf(q) >= 0));\n"
+"    list.sort((a, b) => so === 'weak' ? a.rssi - b.rssi : so === 'ch' ? (a.ch - b.ch || b.rssi - a.rssi) : so === 'name' ? a.ssid.localeCompare(b.ssid) : b.rssi - a.rssi);\n"
+"    $('#wtb').innerHTML = list.length ? list.map(n =>\n"
+"      '<tr><td><b>' + esc(n.ssid) + '</b>' + (n.hidden ? ' <span class=\"tag\">versteckt</span>' : '') + '</td><td>' + sigBar(n.rssi) + '</td><td>' + n.ch + '</td><td>' + encTag(n.auth) + '</td><td class=\"hm mono\">' + esc(n.bssid) + '</td>' +\n"
+"      '<td><button class=\"btn sm\" data-b=\"' + esc(n.bssid) + '\" data-c=\"' + n.ch + '\" data-s=\"' + esc(n.ssid) + '\">' + ic('activity') + 'Verfolgen</button></td></tr>').join('')\n"
+"      : '<tr><td colspan=\"6\" class=\"empty\">' + (WF.nets.length ? 'Keine Netzwerke für diesen Filter.' : 'Noch keine Ergebnisse. Starte einen Scan.') + '</td></tr>';\n"
+"    $$('[data-b]', el).forEach(b => b.onclick = () => { pending = {bssid: b.dataset.b, ch: +b.dataset.c, ssid: b.dataset.s}; go('signal'); });\n"
+"    const running = WF.state === 'running' && !WF.track;\n"
+"    $('#wsStart').disabled = running; $('#wsStop').disabled = !running;\n"
+"    $('#wsInfo').textContent = running ? 'Scan läuft...' : (WF.nets.length + ' Netzwerke' + (WF.age >= 0 ? ' (vor ' + WF.age + ' s)' : '') + (list.length !== WF.nets.length ? ', ' + list.length + ' angezeigt' : ''));\n"
+"  };\n"
+"  let poller = null;\n"
+"  const load = async () => {\n"
+"    WF = await api('/api/wifi/scan');\n"
+"    paint();\n"
+"    if (WF.state !== 'running' && poller) { clearInterval(poller); poller = null; }\n"
+"  };\n"
+"  const startPoll = () => { if (!poller) { poller = setInterval(() => load().catch(() => {}), 1200); timers.push(poller); } };\n"
+"  $('#wsStart').onclick = async () => { if (await act('/api/wifi/scan/start', {}, 'Scan gestartet')) { WF.state = 'running'; WF.track = false; paint(); startPoll(); } };\n"
+"  $('#wsStop').onclick = async () => { await act('/api/wifi/scan/stop', {}, 'Scan gestoppt'); load().catch(() => {}); };\n"
+"  ['fq', 'fsig', 'fch', 'fenc', 'fsort'].forEach(i => $('#' + i).addEventListener(i === 'fq' ? 'input' : 'change', paint));\n"
+"  load().then(() => { if (WF.state === 'running') startPoll(); if (pending === 'scan') { pending = null; $('#wsStart').click(); } }).catch(() => {});\n"
+"};\n"
+"\n"
+"// ---------------------------------------------------------- Kanaluebersicht ---\n"
+"VIEWS.channels = el => {\n"
+"  el.innerHTML = '<div class=\"card\"><div class=\"bar\"><button class=\"btn pri\" id=\"csStart\">' + ic('play') + 'Scan starten</button><span id=\"csInfo\" class=\"mut\"></span></div></div>' +\n"
+"    '<div class=\"card\"><div class=\"sec\">' + ic('bars') + '<h2>Netzwerke pro WLAN-Kanal (2,4 GHz)</h2></div><div class=\"chart\" id=\"chart\"></div><div class=\"hint\" id=\"chHint\"></div></div>' +\n"
+"    '<div class=\"card\"><h3>Netzwerke pro Kanal</h3><div id=\"chList\" style=\"margin-top:10px\"></div></div>';\n"
+"  const paint = () => {\n"
+"    const cnt = Array(14).fill(0), best = Array(14).fill(-200), names = Array.from({length: 14}, () => []);\n"
+"    WF.nets.forEach(n => { if (n.ch >= 1 && n.ch <= 14) { cnt[n.ch - 1]++; best[n.ch - 1] = Math.max(best[n.ch - 1], n.rssi); names[n.ch - 1].push(n.ssid); } });\n"
+"    const mx = Math.max(1, ...cnt);\n"
+"    // Empfehlung: unter den ueberlappungsfreien Kanaelen 1/6/11 den am wenigsten belegten waehlen\n"
+"    const w = [1, .7, .35, .12];\n"
+"    let rec = 0, recScore = 1e9;\n"
+"    [1, 6, 11].forEach(c => { let s = 0; WF.nets.forEach(n => { const d = Math.abs(n.ch - c); if (d < w.length) s += w[d] * (n.rssi > -75 ? 1.5 : 1); }); if (s < recScore) { recScore = s; rec = c; } });\n"
+"    $('#chart').innerHTML = cnt.slice(0, 13).map((c, i) => '<div class=\"col' + (WF.nets.length && rec === i + 1 ? ' rec' : '') + '\"><b>' + (c || '') + '</b><div class=\"bx ' + (c === 0 ? 'zero' : (c === mx && c > 1 ? 'hot' : '')) + '\" style=\"height:' + (c ? 8 + c / mx * 82 : 2) + '%\"></div><span>' + (i + 1) + '</span></div>').join('');\n"
+"    $('#chHint').textContent = WF.nets.length ? 'Empfehlung für den eigenen Access Point: Kanal ' + rec + ' (am wenigsten Störung durch andere Netze). Nur die Kanäle 1, 6 und 11 überlappen sich nicht.' : 'Starte einen Scan, um die Kanalbelegung zu sehen.';\n"
+"    $('#chList').innerHTML = cnt.slice(0, 13).map((c, i) => c ? '<div style=\"padding:8px 0;border-bottom:1px solid var(--line)\"><b>Kanal ' + (i + 1) + '</b> <span class=\"tag acc\">' + c + '</span> <span class=\"mut\">stärkstes Signal ' + best[i] + ' dBm</span><div class=\"mut\" style=\"font-size:13px\">' + names[i].map(esc).join(', ') + '</div></div>' : '').join('') || '<div class=\"empty\">Keine Daten.</div>';\n"
+"    const running = WF.state === 'running' && !WF.track;\n"
+"    $('#csStart').disabled = running;\n"
+"    $('#csInfo').textContent = running ? 'Scan läuft...' : (WF.nets.length + ' Netzwerke');\n"
+"  };\n"
+"  let poller = null;\n"
+"  const load = async () => { WF = await api('/api/wifi/scan'); paint(); if (WF.state !== 'running' && poller) { clearInterval(poller); poller = null; } };\n"
+"  $('#csStart').onclick = async () => { if (await act('/api/wifi/scan/start', {}, 'Scan gestartet')) { WF.state = 'running'; WF.track = false; paint(); if (!poller) { poller = setInterval(() => load().catch(() => {}), 1200); timers.push(poller); } } };\n"
+"  load().then(() => { if (WF.state === 'running' && !poller) { poller = setInterval(() => load().catch(() => {}), 1200); timers.push(poller); } }).catch(() => {});\n"
+"};\n"
+"\n"
+"// -------------------------------------------------------------------- RSSI ---\n"
+"let TRK = {on: false, target: null, hist: []};\n"
+"VIEWS.signal = el => {\n"
+"  el.innerHTML = '<div class=\"card\"><div class=\"bar\"><select id=\"tsel\" style=\"flex:1 1 260px\"><option value=\"\">Netzwerk wählen...</option></select><button class=\"btn\" id=\"tscan\">' + ic('search') + 'Netzwerke suchen</button><button class=\"btn pri\" id=\"tgo\">' + ic('play') + 'Start</button></div><div class=\"hint\">Der ESP32 fragt das gewählte Netzwerk jede Sekunde ab (kurze Abfrage nur auf dessen Kanal).</div></div>' +\n"
+"    '<div class=\"grid g4\" style=\"margin-top:14px\" id=\"tstats\"></div>' +\n"
+"    '<div class=\"card\"><div class=\"sec\">' + ic('activity') + '<h2 id=\"tname\">Signalverlauf</h2></div><canvas id=\"cv\"></canvas></div>';\n"
+"  const sel = $('#tsel');\n"
+"  const fill = () => {\n"
+"    const keep = TRK.target ? TRK.target.bssid : sel.value;\n"
+"    sel.innerHTML = '<option value=\"\">Netzwerk wählen...</option>' + WF.nets.slice().sort((a, b) => b.rssi - a.rssi).map(n => '<option value=\"' + esc(n.bssid) + '\" data-c=\"' + n.ch + '\" data-s=\"' + esc(n.ssid) + '\">' + esc(n.ssid) + ' (Kanal ' + n.ch + ', ' + n.rssi + ' dBm)</option>').join('');\n"
+"    if (TRK.target && !WF.nets.some(n => n.bssid === TRK.target.bssid)) sel.innerHTML += '<option value=\"' + esc(TRK.target.bssid) + '\" data-c=\"' + TRK.target.ch + '\" data-s=\"' + esc(TRK.target.ssid) + '\">' + esc(TRK.target.ssid) + ' (Kanal ' + TRK.target.ch + ')</option>';\n"
+"    sel.value = keep;\n"
+"  };\n"
+"  const draw = () => {\n"
+"    const cv = $('#cv'); if (!cv) return;\n"
+"    const dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;\n"
+"    cv.width = W * dpr; cv.height = H * dpr;\n"
+"    const g = cv.getContext('2d'); g.scale(dpr, dpr);\n"
+"    g.clearRect(0, 0, W, H);\n"
+"    const L = 44, R = 10, T = 12, B = 22, lo = -100, hi = -20;\n"
+"    const y = v => T + (hi - v) / (hi - lo) * (H - T - B);\n"
+"    g.font = '11px system-ui'; g.textBaseline = 'middle';\n"
+"    for (let v = -100; v <= -20; v += 20) { g.strokeStyle = '#25324d'; g.beginPath(); g.moveTo(L, y(v)); g.lineTo(W - R, y(v)); g.stroke(); g.fillStyle = '#8fa0c0'; g.fillText(v + '', 6, y(v)); }\n"
+"    const h = TRK.hist, N = 120;\n"
+"    const x = i => L + (W - L - R) * (i / (N - 1));\n"
+"    const off = Math.max(0, N - h.length);\n"
+"    g.strokeStyle = '#4f8cff'; g.lineWidth = 2.2; g.lineJoin = 'round';\n"
+"    g.beginPath(); let pen = false;\n"
+"    h.forEach((v, i) => { if (v === null) { pen = false; return; } const px = x(i + off), py = y(clamp(v, lo, hi)); if (!pen) { g.moveTo(px, py); pen = true; } else g.lineTo(px, py); });\n"
+"    g.stroke();\n"
+"    const last = h.length ? h[h.length - 1] : null;\n"
+"    if (last !== null) { g.fillStyle = sigColor(last); g.beginPath(); g.arc(x(h.length - 1 + off), y(clamp(last, lo, hi)), 4.5, 0, 7); g.fill(); }\n"
+"    g.fillStyle = '#8fa0c0'; g.textBaseline = 'alphabetic'; g.fillText('Zeit →   (letzte ' + h.length + ' Messungen)', L, H - 5);\n"
+"  };\n"
+"  const stats = () => {\n"
+"    const v = TRK.hist.filter(x => x !== null), last = TRK.hist.length ? TRK.hist[TRK.hist.length - 1] : null;\n"
+"    const c = (l, t, col) => '<div class=\"card stat\"><div class=\"lbl\">' + l + '</div><div class=\"val\" style=\"' + (col ? 'color:' + col : '') + '\">' + t + '</div></div>';\n"
+"    $('#tstats').innerHTML = c('Aktuell', last === null ? (TRK.hist.length ? 'nicht gefunden' : '-') : last + ' dBm', last === null ? '' : sigColor(last)) +\n"
+"      c('Stärkstes', v.length ? Math.max(...v) + ' dBm' : '-') + c('Schwächstes', v.length ? Math.min(...v) + ' dBm' : '-') +\n"
+"      c('Durchschnitt', v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) + ' dBm' : '-');\n"
+"    $('#tname').textContent = TRK.target ? 'Signalverlauf: ' + TRK.target.ssid : 'Signalverlauf';\n"
+"    $('#tgo').innerHTML = TRK.on ? ic('stop') + 'Stopp' : ic('play') + 'Start';\n"
+"    draw();\n"
+"  };\n"
+"  TRK.paint = stats;\n"
+"  const loop = async () => {\n"
+"    const mine = TRK.run = (TRK.run || 0) + 1;\n"
+"    while (TRK.on && TRK.run === mine) {\n"
+"      try {\n"
+"        try { await api('/api/wifi/track', {bssid: TRK.target.bssid, ch: TRK.target.ch}); }\n"
+"        catch (e) { if (e.message.indexOf('läuft') < 0) throw e; }\n"
+"        let d = null;\n"
+"        for (let i = 0; i < 40 && TRK.on && TRK.run === mine; i++) { await sleep(250); d = await api('/api/wifi/track'); if (!d.running) break; }\n"
+"        if (d && !d.running && TRK.run === mine) { TRK.hist.push(d.found ? d.rssi : null); if (TRK.hist.length > 120) TRK.hist.shift(); if ($('#cv')) stats(); }\n"
+"      } catch (e) { if (e.message === 'Nicht angemeldet') { TRK.on = false; break; } await sleep(2000); }\n"
+"      await sleep(600);\n"
+"    }\n"
+"  };\n"
+"  $('#tgo').onclick = () => {\n"
+"    if (TRK.on) { TRK.on = false; TRK.paint && TRK.paint(); return; }\n"
+"    const o = sel.selectedOptions[0];\n"
+"    if (!o || !o.value) { toast('Bitte zuerst ein Netzwerk wählen', 'err'); return; }\n"
+"    if (!TRK.target || TRK.target.bssid !== o.value) { TRK.hist = []; }\n"
+"    TRK.target = {bssid: o.value, ch: +o.dataset.c, ssid: o.dataset.s};\n"
+"    TRK.on = true; stats(); loop();\n"
+"  };\n"
+"  $('#tscan').onclick = async () => {\n"
+"    if (TRK.on) { toast('Bitte zuerst die Messung stoppen', 'err'); return; }\n"
+"    if (!await act('/api/wifi/scan/start', {}, 'Suche läuft...')) return;\n"
+"    for (let i = 0; i < 40; i++) { await sleep(1000); const d = await api('/api/wifi/scan').catch(() => null); if (d && d.state !== 'running') { WF = d; fill(); toast(d.count + ' Netzwerke gefunden', 'ok'); break; } }\n"
+"  };\n"
+"  window.addEventListener('resize', draw);\n"
+"  if (pending && pending.bssid) {\n"
+"    TRK.target = pending; TRK.hist = []; pending = null;\n"
+"    fill(); sel.value = TRK.target.bssid; TRK.on = true; stats(); loop();\n"
+"  } else {\n"
+"    api('/api/wifi/scan').then(d => { WF = d; fill(); stats(); }).catch(() => {}); stats();\n"
+"  }\n"
+"};\n"
+"\n"
+"// --------------------------------------------------------------- Mein WLAN ---\n"
+"VIEWS.myap = el => {\n"
+"  el.innerHTML =\n"
+"    '<div class=\"card\"><div class=\"sec\">' + ic('radio') + '<h2>Eigenes WLAN (Access Point)</h2></div><div id=\"apInfo\" class=\"kv\"></div><div class=\"bar\" style=\"margin-top:14px\"><button class=\"btn pri\" id=\"apStart\">' + ic('play') + 'WLAN starten</button><button class=\"btn dng\" id=\"apStop\">' + ic('stop') + 'WLAN stoppen</button><button class=\"btn\" id=\"apSet\">' + ic('gear') + 'Name / Passwort / Kanal ändern</button></div>' +\n"
+"    '<div class=\"hint\">Wichtig: Stoppst du das WLAN, verlierst du die Verbindung zu dieser Seite. Ein Neustart des ESP32 (Reset-Taste) startet es wieder.</div></div>' +\n"
+"    '<div class=\"card\"><div class=\"sec\">' + ic('users') + '<h2>Verbundene Geräte</h2></div><div class=\"scroll\"><table class=\"tbl\"><thead><tr><th>IP-Adresse</th><th>MAC-Adresse</th><th>Signal</th><th>Status</th><th></th></tr></thead><tbody id=\"cl\"></tbody></table></div>' +\n"
+"    '<div class=\"hint\">Gilt ausschließlich für Geräte an deinem eigenen ESP32-WLAN. „Sperren“ wirft ein Gerät aus diesem WLAN und verhindert das erneute Verbinden. Handys mit „privater MAC-Adresse“ nutzen pro WLAN eine feste, aber andere MAC.</div></div>' +\n"
+"    '<div class=\"card\"><div class=\"sec\">' + ic('flask') + '<h2>Test-WLANs</h2></div>' +\n"
+"    '<div class=\"hint\" style=\"margin:0 0 12px\">Der ESP32 erzeugt eigene Test-Access-Points mit zufälligen Namen (z. B. ESP32-Test-4821). Er hat nur <b>ein</b> Funkmodul und kann deshalb nur <b>ein</b> Test-WLAN gleichzeitig senden. Bei mehreren werden sie reihum aktiviert. Sie nutzen das Passwort deines Access Points; diese Weboberfläche bleibt darüber unter 192.168.4.1 erreichbar. Keine fremden Namen, kein Störsender.</div>' +\n"
+"    '<div class=\"bar\"><label style=\"margin:0\">Anzahl</label><select id=\"tcount\"><option>1</option><option>2</option><option>3</option><option>5</option></select><label style=\"margin:0\">Wechsel alle</label><select id=\"tint\"><option value=\"15\">15 s</option><option value=\"30\" selected>30 s</option><option value=\"60\">60 s</option></select>' +\n"
+"    '<button class=\"btn pri\" id=\"tStart\">' + ic('play') + 'Test-WLANs starten</button><button class=\"btn dng\" id=\"tStop\">' + ic('stop') + 'Alle Test-WLANs stoppen</button></div><div id=\"tInfo\" style=\"margin-top:14px\"></div></div>';\n"
+"  const load = async () => {\n"
+"    const [a, c] = await Promise.all([api('/api/ap'), api('/api/ap/clients')]);\n"
+"    $('#apInfo').innerHTML = '<div>Status</div><div>' + (a.test ? '' : '') + (a.running ? '<span class=\"tag ok\">Aktiv</span>' : '<span class=\"tag err\">Gestoppt</span>') + (a.test.active ? ' <span class=\"tag warn\">Testmodus</span>' : '') + '</div>' +\n"
+"      '<div>Name (SSID)</div><div>' + esc(a.ssid || a.cfgSsid) + '</div><div>Kanal</div><div>' + a.ch + (a.ch !== a.cfgCh && a.running ? ' <span class=\"mut\">(eingestellt: ' + a.cfgCh + ' - folgt dem Heim-WLAN)</span>' : '') + '</div><div>Adresse</div><div class=\"mono\">http://' + esc(a.ip) + '</div><div>MAC</div><div class=\"mono\">' + esc(a.mac) + '</div><div>Geräte</div><div>' + a.clients + '</div>';\n"
+"    $('#cl').innerHTML = c.clients.length ? c.clients.map(d => '<tr><td>' + esc(d.ip) + '</td><td class=\"mono\">' + esc(d.mac) + '</td><td>' + (d.connected ? sigBar(d.rssi) : '<span class=\"mut\">-</span>') + '</td><td><span class=\"tag ' + (d.blocked ? 'err' : 'ok') + '\">' + esc(d.status) + (d.blocked && !d.connected ? ' (offline)' : '') + '</span></td><td><button class=\"btn sm\" data-m=\"' + esc(d.mac) + '\" data-k=\"' + (d.blocked ? 'unblock' : 'block') + '\">' + ic(d.blocked ? 'unlock' : 'lock') + (d.blocked ? 'Entsperren' : 'Sperren') + '</button></td></tr>').join('') : '<tr><td colspan=\"5\" class=\"empty\">Kein Gerät verbunden.</td></tr>';\n"
+"    $$('[data-m]', el).forEach(b => b.onclick = async () => { if (b.dataset.k === 'block' && !confirm('Dieses Gerät aus deinem WLAN werfen und sperren?')) return; await act('/api/ap/' + b.dataset.k, {mac: b.dataset.m}, b.dataset.k === 'block' ? 'Gerät gesperrt' : 'Gerät entsperrt'); load().catch(() => {}); });\n"
+"    const t = a.test;\n"
+"    $('#tInfo').innerHTML = t.active ? '<div class=\"pill-row\">' + t.names.map((n, i) => '<span class=\"tag ' + (i === t.idx ? 'ok' : '') + '\">' + (i === t.idx ? '● ' : '') + esc(n) + '</span>').join('') + '</div><div class=\"hint\">' + (t.count > 1 ? 'Nächster Wechsel in ' + Math.max(0, t.nextIn) + ' s. ' : '') + 'Endet automatisch in ' + Math.max(0, Math.round(t.left / 60)) + ' Min.</div>' : '<div class=\"mut\">Kein Test-WLAN aktiv.</div>';\n"
+"    $('#apStart').disabled = a.running && !t.active; $('#apStop').disabled = !a.running;\n"
+"  };\n"
+"  $('#apStart').onclick = async () => { await act('/api/ap/start', {}, 'WLAN gestartet'); load().catch(() => {}); };\n"
+"  $('#apStop').onclick = async () => { if (!confirm('Eigenes WLAN wirklich stoppen? Du verlierst die Verbindung zu dieser Seite.')) return; await act('/api/ap/stop', {}, 'WLAN wird gestoppt'); };\n"
+"  $('#apSet').onclick = () => { pending = 'ap'; go('settings'); };\n"
+"  $('#tStart').onclick = async () => {\n"
+"    if (!confirm('Test-WLANs starten? Dein aktuelles WLAN wechselt dabei den Namen - verbinde dich danach mit dem angezeigten Test-WLAN (gleiches Passwort).')) return;\n"
+"    await act('/api/test/start', {count: $('#tcount').value, interval: $('#tint').value}, 'Test-WLANs gestartet'); load().catch(() => {});\n"
+"  };\n"
+"  $('#tStop').onclick = async () => { await act('/api/test/stop', {}, 'Test-WLANs gestoppt'); load().catch(() => {}); };\n"
+"  every(load, 3000);\n"
+"};\n"
+"\n"
+"// --------------------------------------------------------------- Bluetooth ---\n"
+"let BL = {devs: [], state: 'ready'};\n"
+"VIEWS.ble = el => {\n"
+"  el.innerHTML = '<div class=\"card\"><div class=\"bar\"><select id=\"bdur\"><option value=\"5\">5 s</option><option value=\"10\" selected>10 s</option><option value=\"30\">30 s</option><option value=\"60\">60 s</option></select><button class=\"btn pri\" id=\"bsStart\">' + ic('play') + 'BLE scannen</button><button class=\"btn\" id=\"bsStop\">' + ic('stop') + 'Scan stoppen</button><button class=\"btn dng\" id=\"bsClear\">' + ic('trash') + 'Ergebnisse löschen</button><span id=\"bsInfo\" class=\"mut\"></span></div>' +\n"
+"    '<div class=\"filters\"><div class=\"srch\">' + ic('search') + '<input id=\"bq\" placeholder=\"Name, Adresse oder Hersteller suchen...\" autocomplete=\"off\"></div><select id=\"bsort\"><option value=\"strong\">Sortierung: stärkstes Signal</option><option value=\"weak\">schwächstes Signal</option><option value=\"name\">Name</option><option value=\"mfr\">Hersteller</option></select></div></div>' +\n"
+"    '<div class=\"card scroll\"><table class=\"tbl\"><thead><tr><th>Gerät</th><th>Adresse</th><th>Signal</th><th>Hersteller</th><th class=\"hm\">Services (UUID)</th></tr></thead><tbody id=\"btb\"></tbody></table></div>';\n"
+"  const paint = () => {\n"
+"    const q = $('#bq').value.trim().toLowerCase(), so = $('#bsort').value;\n"
+"    const list = BL.devs.filter(d => !q || (d.name + ' ' + d.addr + ' ' + d.mfrName + ' ' + d.svc.join(' ')).toLowerCase().indexOf(q) >= 0);\n"
+"    list.sort((a, b) => so === 'weak' ? a.rssi - b.rssi : so === 'name' ? (a.name || '￿').localeCompare(b.name || '￿') : so === 'mfr' ? (a.mfrName || '￿').localeCompare(b.mfrName || '￿') : b.rssi - a.rssi);\n"
+"    $('#btb').innerHTML = list.length ? list.map(d => '<tr><td><b>' + (d.name ? esc(d.name) : '<span class=\"mut\">(ohne Name)</span>') + '</b></td><td class=\"mono\">' + esc(d.addr) + '</td><td>' + sigBar(d.rssi) + '</td><td>' + (d.mfrName ? esc(d.mfrName) : (d.mfr >= 0 ? '<span class=\"mut\">ID 0x' + d.mfr.toString(16).toUpperCase().padStart(4, '0') + '</span>' : '<span class=\"mut\">-</span>')) + '</td><td class=\"hm mono\">' + (d.svc.length ? d.svc.map(esc).join(', ') : '<span class=\"mut\">-</span>') + '</td></tr>').join('')\n"
+"      : '<tr><td colspan=\"5\" class=\"empty\">' + (BL.devs.length ? 'Keine Treffer.' : 'Noch keine Geräte. Starte einen Scan.') + '</td></tr>';\n"
+"    const sc = BL.state === 'scanning';\n"
+"    $('#bsStart').disabled = sc; $('#bsStop').disabled = !sc;\n"
+"    $('#bsInfo').textContent = BL.state === 'error' ? 'BLE-Fehler - bitte neu starten' : (sc ? 'Scan läuft... noch ' + Math.max(0, BL.left) + ' s' : BL.devs.length + ' Geräte');\n"
+"  };\n"
+"  const load = async () => { BL = await api('/api/ble'); paint(); };\n"
+"  $('#bsStart').onclick = async () => { if (await act('/api/ble/start', {secs: $('#bdur').value}, 'BLE-Scan gestartet')) { BL.state = 'scanning'; BL.left = +$('#bdur').value; paint(); } };\n"
+"  $('#bsStop').onclick = async () => { await act('/api/ble/stop', {}, 'Scan wird gestoppt'); };\n"
+"  $('#bsClear').onclick = async () => { await act('/api/ble/clear', {}, 'Ergebnisse gelöscht'); load().catch(() => {}); };\n"
+"  ['bq', 'bsort'].forEach(i => $('#' + i).addEventListener(i === 'bq' ? 'input' : 'change', paint));\n"
+"  every(load, 1500);\n"
+"  if (pending === 'scan') { pending = null; setTimeout(() => $('#bsStart') && $('#bsStart').click(), 300); }\n"
+"};\n"
+"\n"
+"// -------------------------------------------------------------------- Logs ---\n"
+"VIEWS.logs = el => {\n"
+"  el.innerHTML = '<div class=\"card\"><div class=\"bar\"><button class=\"btn dng\" id=\"lgClear\">' + ic('trash') + 'Logs löschen</button><button class=\"btn\" id=\"lgRef\">' + ic('refresh') + 'Aktualisieren</button><span class=\"mut\" id=\"lgInfo\"></span></div></div><div class=\"card\"><div class=\"log\" id=\"lg\"></div></div>';\n"
+"  const load = async () => {\n"
+"    const d = await api('/api/logs');\n"
+"    const rows = d.logs.slice().reverse();\n"
+"    $('#lg').innerHTML = rows.length ? rows.map(l => '<div class=\"l' + l.l + '\"><span class=\"t\">' + fmtUp(l.t) + '</span><span>' + esc(l.m) + '</span></div>').join('') : '<div class=\"empty\">Keine Einträge.</div>';\n"
+"    $('#lgInfo').textContent = d.logs.length + ' Einträge (Zeit = Laufzeit seit Start)';\n"
+"  };\n"
+"  $('#lgClear').onclick = async () => { await act('/api/logs/clear', {}, 'Logs gelöscht'); load().catch(() => {}); };\n"
+"  $('#lgRef').onclick = () => load().catch(() => {});\n"
+"  every(load, 2500);\n"
+"};\n"
+"\n"
+"// ----------------------------------------------------------- Einstellungen ---\n"
+"let UP = null;\n"
+"VIEWS.settings = el => {\n"
+"  el.innerHTML =\n"
+"    '<div class=\"sub-nav\"><a data-s=\"s-ap\">Access Point</a><a data-s=\"s-web\">Webinterface</a><a data-s=\"s-sta\">Internet (Heim-WLAN)</a><a data-s=\"s-sys\">System</a><a data-s=\"s-upd\">Firmware-Update</a></div>' +\n"
+"    '<div class=\"card\" id=\"s-ap\"><div class=\"sec\">' + ic('radio') + '<h2>Access Point</h2></div>' +\n"
+"    '<label>Name des WLANs (SSID)</label><input id=\"apSsid\" maxlength=\"32\" style=\"width:100%;max-width:380px\"><label>Passwort (8-63 Zeichen, leer = unverändert)</label><input id=\"apPass\" type=\"password\" autocomplete=\"new-password\" maxlength=\"63\" placeholder=\"unverändert\" style=\"width:100%;max-width:380px\"><label>Kanal</label><select id=\"apCh\">' + Array.from({length: 11}, (_, i) => '<option>' + (i + 1) + '</option>').join('') + '</select>' +\n"
+"    '<div class=\"hint\">Ist der ESP32 mit einem Heim-WLAN verbunden, übernimmt der Access Point automatisch dessen Kanal.</div><div style=\"margin-top:14px\"><button class=\"btn pri\" id=\"apSave\">Speichern &amp; WLAN neu starten</button></div></div>' +\n"
+"    '<div class=\"card\" id=\"s-web\"><div class=\"sec\">' + ic('shield') + '<h2>Webinterface</h2></div>' +\n"
+"    '<label style=\"display:flex;gap:10px;align-items:center;color:var(--tx);font-size:15px\"><input type=\"checkbox\" id=\"wAuth\"> Login aktivieren</label>' +\n"
+"    '<label>Benutzername</label><input id=\"wUser\" maxlength=\"32\" autocomplete=\"username\" style=\"width:100%;max-width:380px\"><label>Aktuelles Passwort (zur Bestätigung)</label><input id=\"wOld\" type=\"password\" autocomplete=\"current-password\" style=\"width:100%;max-width:380px\"><label>Neues Passwort (mind. 6 Zeichen, leer = unverändert)</label><input id=\"wNew\" type=\"password\" autocomplete=\"new-password\" style=\"width:100%;max-width:380px\">' +\n"
+"    '<div style=\"margin-top:14px\"><button class=\"btn pri\" id=\"wSave\">Speichern</button></div></div>' +\n"
+"    '<div class=\"card\" id=\"s-sta\"><div class=\"sec\">' + ic('globe') + '<h2>Internet (Heim-WLAN, optional)</h2></div><div class=\"hint\" style=\"margin:0 0 6px\">Nur nötig für Firmware-Updates. Ohne Internet funktioniert alles andere weiterhin.</div><div id=\"staInfo\" class=\"kv\" style=\"margin:10px 0\"></div>' +\n"
+"    '<label>WLAN-Name (SSID)</label><input id=\"sSsid\" list=\"sList\" maxlength=\"32\" style=\"width:100%;max-width:380px\"><datalist id=\"sList\"></datalist><label>Passwort</label><input id=\"sPass\" type=\"password\" autocomplete=\"new-password\" maxlength=\"63\" style=\"width:100%;max-width:380px\">' +\n"
+"    '<div class=\"bar\" style=\"margin-top:14px\"><button class=\"btn pri\" id=\"sGo\">Verbinden</button><button class=\"btn\" id=\"sOff\">Trennen &amp; vergessen</button></div></div>' +\n"
+"    '<div class=\"card\" id=\"s-sys\"><div class=\"sec\">' + ic('cpu') + '<h2>System</h2></div><div class=\"kv\" id=\"sysInfo\"></div><div class=\"bar\" style=\"margin-top:14px\"><button class=\"btn\" id=\"rst\">' + ic('power') + 'Neustart</button><button class=\"btn dng\" id=\"fac\">' + ic('trash') + 'Werkseinstellungen</button></div></div>' +\n"
+"    '<div class=\"card\" id=\"s-upd\"><div class=\"sec\">' + ic('download') + '<h2>Firmware-Update</h2></div><div id=\"updBody\"><div class=\"empty\">Lade...</div></div></div>';\n"
+"  $$('[data-s]', el).forEach(a => a.onclick = () => { const t = $('#' + a.dataset.s); if (t) t.scrollIntoView({behavior: 'smooth', block: 'start'}); });\n"
+"\n"
+"  api('/api/settings').then(s => {\n"
+"    $('#apSsid').value = s.apSsid; $('#apCh').value = s.apCh; $('#wUser').value = s.webUser; $('#wAuth').checked = s.authEnabled; $('#sSsid').value = s.staSsid;\n"
+"    paintSta(s.sta);\n"
+"  }).catch(() => {});\n"
+"  api('/api/wifi/scan').then(d => { $('#sList').innerHTML = d.nets.map(n => '<option value=\"' + esc(n.ssid) + '\">').join(''); }).catch(() => {});\n"
+"  const paintSta = sta => {\n"
+"    const names = {idle: 'Nicht verbunden', connecting: 'Verbinde...', connected: 'Verbunden', failed: 'Verbindung fehlgeschlagen'};\n"
+"    $('#staInfo').innerHTML = '<div>Status</div><div><span class=\"tag ' + (sta.state === 'connected' ? 'ok' : (sta.state === 'failed' ? 'err' : '')) + '\">' + names[sta.state] + '</span></div>' + (sta.state === 'connected' ? '<div>Netzwerk</div><div>' + esc(sta.ssid) + '</div><div>IP-Adresse</div><div class=\"mono\">' + esc(sta.ip) + '</div><div>Signal</div><div>' + sta.rssi + ' dBm</div>' : '');\n"
+"  };\n"
+"  const sysPaint = () => {\n"
+"    if (!ST) return;\n"
+"    $('#sysInfo').innerHTML = '<div>Chip</div><div>' + esc(ST.chip.model) + ' Rev. ' + ST.chip.rev + '</div><div>CPU</div><div>' + ST.chip.mhz + ' MHz</div><div>Flash</div><div>' + fmtB(ST.mem.flash) + '</div><div>PSRAM</div><div>' + (ST.mem.psram ? fmtB(ST.mem.psram) : 'nicht erkannt') + '</div><div>Freier RAM</div><div>' + fmtB(ST.mem.free) + '</div><div>Laufzeit</div><div>' + fmtUp(ST.up) + '</div><div>Firmware</div><div>v' + esc(ST.fw) + '</div>';\n"
+"    if (ST.wifi) paintSta(ST.wifi.sta);\n"
+"  };\n"
+"  every(sysPaint, 3000);\n"
+"\n"
+"  $('#apSave').onclick = async () => {\n"
+"    const r = await act('/api/ap/save', {ssid: $('#apSsid').value, pass: $('#apPass').value, ch: $('#apCh').value});\n"
+"    if (r) { $('#apPass').value = ''; toast('Gespeichert. WLAN startet neu - bitte neu verbinden.', 'ok'); }\n"
+"  };\n"
+"  $('#wSave').onclick = async () => {\n"
+"    const r = await act('/api/settings/web', {user: $('#wUser').value, oldpass: $('#wOld').value, newpass: $('#wNew').value, auth: $('#wAuth').checked ? '1' : '0'});\n"
+"    if (r) { $('#wOld').value = ''; $('#wNew').value = ''; refreshStatus().catch(() => {}); }\n"
+"  };\n"
+"  $('#sGo').onclick = async () => { const r = await act('/api/sta/connect', {ssid: $('#sSsid').value, pass: $('#sPass').value}, 'Verbinde...'); if (r) $('#sPass').value = ''; };\n"
+"  $('#sOff').onclick = async () => { if (confirm('Heim-WLAN trennen und Zugangsdaten löschen?')) { await act('/api/sta/disconnect', {}, 'Getrennt'); $('#sSsid').value = ''; } };\n"
+"  $('#rst').onclick = doRestart;\n"
+"  $('#fac').onclick = async () => {\n"
+"    if (!confirm('ALLE Einstellungen (WLAN, Passwörter, Sperrliste) auf Werkseinstellungen zurücksetzen?')) return;\n"
+"    if (prompt('Zur Bestätigung RESET eintippen:') !== 'RESET') return;\n"
+"    if (await act('/api/system/factory', {confirm: 'RESET'}, false)) { setToken(''); waitForDevice('Werkseinstellungen werden hergestellt...'); }\n"
+"  };\n"
+"  initUpdate();\n"
+"  if (pending === 'web' || pending === 'ap') { const t = $(pending === 'web' ? '#s-web' : '#s-ap'); pending = null; setTimeout(() => t && t.scrollIntoView({behavior: 'smooth', block: 'start'}), 200); }\n"
+"};\n"
+"\n"
+"// ---- Firmware-Update (Abschnitt in den Einstellungen) ----\n"
+"function initUpdate() {\n"
+"  const body = $('#updBody');\n"
+"  const phaseTxt = {idle: '', checking: 'Suche nach Updates...', downloading: 'Firmware wird heruntergeladen...', installing: 'Firmware wird installiert...', done: 'Update erfolgreich – ESP32 startet neu...', error: ''};\n"
+"  let rebooting = false, prevPhase = null;\n"
+"  const paint = d => {\n"
+"    UP = d;\n"
+"    if (!$('#updBody')) return;\n"
+"    const active = d.phase === 'downloading' || d.phase === 'installing' || d.phase === 'done' || d.phase === 'checking';\n"
+"    let statusCls = d.phase === 'error' ? 'err' : (d.phase === 'done' ? 'ok' : (active ? 'acc' : ''));\n"
+"    let msg = d.msg || phaseTxt[d.phase] || '';\n"
+"    if (d.phase === 'downloading') msg = 'Firmware wird heruntergeladen... ' + d.pct + ' %';\n"
+"    const inet = d.internet === 1 ? '<span class=\"tag ok\">Online</span>' : (d.internet === 0 ? '<span class=\"tag err\">Offline</span>' : (d.staUp ? '<span class=\"tag ok\">Heim-WLAN verbunden</span>' : '<span class=\"tag\">Unbekannt</span>'));\n"
+"    const gh = d.internet === 1 && d.github === 'Verbunden' ? '<span class=\"tag ok\">Verbunden</span>' : '<span class=\"tag ' + (d.github && d.github !== 'Noch nicht geprüft' ? 'err' : '') + '\">' + esc(d.github) + '</span>';\n"
+"    body.innerHTML =\n"
+"      (!d.supported ? '<div class=\"banner warn\"><span>Die Update-Funktion benötigt den ESP32-Core 3.3.12 oder neuer. Alle anderen Funktionen sind nicht betroffen.</span></div>' : '') +\n"
+"      (!d.configured ? '<div class=\"banner warn\"><span>Es ist noch kein GitHub-Benutzer eingetragen. Trage <span class=\"mono\">GITHUB_USER</span> und <span class=\"mono\">GITHUB_REPO</span> am Anfang der .ino ein und lade sie neu hoch.</span></div>' : '') +\n"
+"      '<div class=\"kv\"><div>Installierte Version</div><div><b>v' + esc(d.installed) + '</b></div>' +\n"
+"      '<div>Neueste Version</div><div>' + (d.checked ? '<b>v' + esc(d.latest) + '</b>' + (d.available ? ' <span class=\"tag acc\">Update verfügbar</span>' : ' <span class=\"tag ok\">aktuell</span>') + (d.date ? ' <span class=\"mut\">veröffentlicht am ' + esc(d.date) + '</span>' : '') : '<span class=\"mut\">noch nicht geprüft</span>') + '</div>' +\n"
+"      '<div>Internetstatus</div><div>' + inet + '</div><div>GitHub-Verbindung</div><div>' + gh + '</div>' +\n"
+"      '<div>Repository</div><div class=\"mono\">' + esc(d.repo) + '</div>' +\n"
+"      '<div>Letzte Prüfung</div><div>' + (d.lastCheck ? esc(d.lastCheck) : '<span class=\"mut\">nie</span>') + '</div>' +\n"
+"      (d.checked && d.available ? '<div>SHA-256</div><div>' + (d.hasSha ? '<span class=\"tag ok\">Prüfsumme vorhanden</span>' : '<span class=\"tag err\">fehlt</span>') + '</div>' : '') + '</div>' +\n"
+"      '<div class=\"bar\" style=\"margin-top:16px\"><button class=\"btn pri\" id=\"uChk\"' + (d.busy || !d.configured || !d.supported ? ' disabled' : '') + '>' + ic('refresh') + 'Nach Updates suchen</button><button class=\"btn\" id=\"uInst\"' + (d.canInstall ? '' : ' disabled') + '>' + ic('download') + 'Update installieren</button></div>' +\n"
+"      (active && d.phase !== 'checking' ? '<div class=\"prog' + (d.phase === 'downloading' ? '' : ' busy') + '\"><i style=\"width:' + (d.phase === 'downloading' ? d.pct : 100) + '%\"></i></div>' : '') +\n"
+"      (msg ? '<div style=\"margin-top:10px\" class=\"' + (statusCls ? 'tag ' + statusCls : '') + '\" id=\"uMsg\">' + esc(msg) + '</div>' : '') +\n"
+"      (d.checked && d.available && d.notes ? '<h3 style=\"margin-top:16px\">Changelog</h3><pre class=\"notes\">' + esc(d.notes) + '</pre>' : '') +\n"
+"      '<div class=\"hint\">Updates werden nur von <span class=\"mono\">github.com/' + esc(d.repo) + '</span> per HTTPS geladen, mit SHA-256 geprüft und in die zweite Firmware-Partition geschrieben. Bei einem Fehler bleibt die aktuelle Firmware unverändert.</div>' +\n"
+"      '<div style=\"margin-top:18px;padding-top:14px;border-top:1px solid var(--line)\"><h3>Manuell aktualisieren (ohne Internet)</h3><div class=\"bar\" style=\"margin-top:8px\"><input type=\"file\" id=\"uFile\" accept=\".bin\"><button class=\"btn\" id=\"uUp\">' + ic('upload') + 'Datei hochladen</button></div><div class=\"prog\" id=\"uUpP\" style=\"display:none\"><i></i></div><div class=\"hint\">Nur die Datei <span class=\"mono\">…ino.bin</span> aus „Sketch → Kompilierte Binärdatei exportieren“ verwenden – nicht die Datei mit „merged“ im Namen.</div></div>';\n"
+"    const chk = $('#uChk'); if (chk) chk.onclick = async () => { chk.disabled = true; await act('/api/update/check', {}, false); poll(); };\n"
+"    const ins = $('#uInst'); if (ins) ins.onclick = async () => {\n"
+"      if (!confirm('Update auf v' + d.latest + ' installieren? Der ESP32 startet danach neu.')) return;\n"
+"      ins.disabled = true; await act('/api/update/install', {}, false); poll();\n"
+"    };\n"
+"    const up = $('#uUp'); if (up) up.onclick = manualUpload;\n"
+"    const justDone = d.phase === 'done' && prevPhase !== null && prevPhase !== 'done';\n"
+"    prevPhase = d.phase;\n"
+"    if (justDone && !rebooting && !/Demo/.test(d.msg)) { rebooting = true; waitForDevice('Update erfolgreich – ESP32 startet neu...'); }\n"
+"  };\n"
+"  const manualUpload = () => {\n"
+"    const f = $('#uFile').files[0];\n"
+"    if (!f) { toast('Bitte zuerst eine .bin-Datei wählen', 'err'); return; }\n"
+"    if (!/\\.bin$/i.test(f.name) || /merged|bootloader|partitions/i.test(f.name)) { toast('Falsche Datei: bitte die ...ino.bin verwenden (nicht merged/bootloader/partitions).', 'err'); return; }\n"
+"    if (!confirm('Firmware \"' + f.name + '\" jetzt installieren?')) return;\n"
+"    const fd = new FormData(); fd.append('firmware', f, f.name);\n"
+"    const x = new XMLHttpRequest();\n"
+"    x.open('POST', '/api/update/upload');\n"
+"    x.setRequestHeader('X-Token', TOKEN);\n"
+"    const bar = $('#uUpP'); bar.style.display = '';\n"
+"    x.upload.onprogress = e => { if (e.lengthComputable) bar.firstChild.style.width = Math.round(e.loaded * 100 / e.total) + '%'; };\n"
+"    x.onload = () => {\n"
+"      let j = {}; try { j = JSON.parse(x.responseText); } catch (e) {}\n"
+"      if (x.status === 200 && j.ok) waitForDevice('Firmware installiert – ESP32 startet neu...');\n"
+"      else toast(j.error || 'Upload fehlgeschlagen', 'err');\n"
+"    };\n"
+"    x.onerror = () => toast('Upload fehlgeschlagen (Verbindung)', 'err');\n"
+"    x.send(fd);\n"
+"  };\n"
+"  let busyPoll = null;\n"
+"  const load = async () => { const d = await api('/api/update'); paint(d); return d; };\n"
+"  const poll = () => {\n"
+"    if (busyPoll) return;\n"
+"    busyPoll = setInterval(async () => {\n"
+"      try { const d = await load(); if (!d.busy && d.phase !== 'downloading' && d.phase !== 'installing' && d.phase !== 'checking') { clearInterval(busyPoll); busyPoll = null; } }\n"
+"      catch (e) { }\n"
+"    }, 800);\n"
+"    timers.push(busyPoll);\n"
+"  };\n"
+"  load().then(d => { if (d.busy || d.phase === 'downloading' || d.phase === 'installing' || d.phase === 'checking') poll(); }).catch(() => {});\n"
+"}\n"
+"\n"
+"// -------------------------------------------------------- Navigation / Start ---\n"
+"const PAGES = [['dashboard', 'Dashboard', 'home'], ['wifi', 'WLAN-Scanner', 'wifi'], ['channels', 'Kanäle', 'bars'], ['signal', 'Signal', 'activity'], ['myap', 'Mein WLAN', 'radio'], ['ble', 'Bluetooth', 'bt'], ['logs', 'Logs', 'list'], ['settings', 'Einstellungen', 'gear']];\n"
+"function route() {\n"
+"  if (!TOKEN && PUB.auth) return;\n"
+"  const id = (location.hash || '#dashboard').slice(1);\n"
+"  const p = PAGES.find(x => x[0] === id) || PAGES[0];\n"
+"  clearTimers();\n"
+"  if (curPage === 'signal' && p[0] !== 'signal') TRK.on = false;\n"
+"  curPage = p[0];\n"
+"  $$('#nav a').forEach(a => a.classList.toggle('on', a.dataset.p === curPage));\n"
+"  $('#pt').textContent = p[1];\n"
+"  document.title = p[1] + ' · ESP32 Network Toolbox';\n"
+"  const el = $('#view');\n"
+"  el.innerHTML = '';\n"
+"  VIEWS[curPage](el);\n"
+"  window.scrollTo(0, 0);\n"
+"  timers.push(setInterval(() => refreshStatus().catch(() => {}), 4000));\n"
+"}\n"
+"async function boot() {\n"
+"  try { PUB = await (await fetch('/api/public', {cache: 'no-store'})).json(); setConn(true); } catch (e) { setConn(false); setTimeout(boot, 3000); return; }\n"
+"  $('#foot').innerHTML = 'ESP32-S3 N16R8<br>Firmware v' + esc(PUB.fw);\n"
+"  setToken(TOKEN);\n"
+"  if (PUB.auth && !TOKEN) { showLogin(); return; }\n"
+"  try { await refreshStatus(); } catch (e) { if (e.message === 'Nicht angemeldet') return; }\n"
+"  route();\n"
+"}\n"
+"$('#nav').innerHTML = PAGES.map(p => '<a href=\"#' + p[0] + '\" data-p=\"' + p[0] + '\">' + ic(p[2]) + '<span>' + p[1] + '</span></a>').join('');\n"
+"$('#btnOut').onclick = async () => { try { await api('/api/logout', {}); } catch (e) {} setToken(''); clearTimers(); location.hash = ''; showLogin(); };\n"
+"window.addEventListener('hashchange', route);\n"
+"boot();\n"
+"</script>\n"
+"</body>\n"
+"</html>\n";
