@@ -701,17 +701,44 @@ VIEWS.settings = el => {
     '<label>Benutzername</label><input id="wUser" maxlength="32" autocomplete="username" style="width:100%;max-width:380px"><label>Aktuelles Passwort (zur Bestätigung)</label><input id="wOld" type="password" autocomplete="current-password" style="width:100%;max-width:380px"><label>Neues Passwort (mind. 6 Zeichen, leer = unverändert)</label><input id="wNew" type="password" autocomplete="new-password" style="width:100%;max-width:380px">' +
     '<div style="margin-top:14px"><button class="btn pri" id="wSave">Speichern</button></div></div>' +
     '<div class="card" id="s-sta"><div class="sec">' + ic('globe') + '<h2>Internet (Heim-WLAN, optional)</h2></div><div class="hint" style="margin:0 0 6px">Nur nötig für Firmware-Updates. Ohne Internet funktioniert alles andere weiterhin.</div><div id="staInfo" class="kv" style="margin:10px 0"></div>' +
-    '<label>WLAN-Name (SSID)</label><input id="sSsid" list="sList" maxlength="32" style="width:100%;max-width:380px"><datalist id="sList"></datalist><label>Passwort</label><input id="sPass" type="password" autocomplete="new-password" maxlength="63" style="width:100%;max-width:380px">' +
-    '<div class="bar" style="margin-top:14px"><button class="btn pri" id="sGo">Verbinden</button><button class="btn" id="sOff">Trennen &amp; vergessen</button></div></div>' +
+    '<div class="bar"><button class="btn pri" id="staScan">' + ic('search') + 'WLANs suchen</button><span id="staScanInfo" class="mut"></span></div>' +
+    '<div id="staList" style="margin-top:12px"></div>' +
+    '<div id="staPickForm" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">' +
+    '<div class="hint" style="margin:0 0 10px">Verbinden mit: <b id="pickedName"></b></div><input type="hidden" id="sSsid">' +
+    '<div id="staPassWrap"><label>Passwort</label><input id="sPass" type="password" autocomplete="new-password" maxlength="63" style="width:100%;max-width:380px"></div>' +
+    '<div class="bar" style="margin-top:14px"><button class="btn pri" id="sGo">Verbinden</button><button class="btn" id="sCancel">Abbrechen</button></div></div>' +
+    '<details style="margin-top:14px"><summary style="cursor:pointer;color:var(--mut);font-size:13px">Verstecktes WLAN manuell eingeben</summary>' +
+    '<label>WLAN-Name (SSID)</label><input id="sSsidManual" maxlength="32" style="width:100%;max-width:380px"><label>Passwort</label><input id="sPassManual" type="password" autocomplete="new-password" maxlength="63" style="width:100%;max-width:380px">' +
+    '<div class="bar" style="margin-top:14px"><button class="btn" id="sGoManual">Verbinden</button></div></details>' +
+    '<div class="bar" style="margin-top:14px"><button class="btn dng" id="sOff">Trennen &amp; vergessen</button></div></div>' +
     '<div class="card" id="s-sys"><div class="sec">' + ic('cpu') + '<h2>System</h2></div><div class="kv" id="sysInfo"></div><div class="bar" style="margin-top:14px"><button class="btn" id="rst">' + ic('power') + 'Neustart</button><button class="btn dng" id="fac">' + ic('trash') + 'Werkseinstellungen</button></div></div>' +
     '<div class="card" id="s-upd"><div class="sec">' + ic('download') + '<h2>Firmware-Update</h2></div><div id="updBody"><div class="empty">Lade...</div></div></div>';
   $$('[data-s]', el).forEach(a => a.onclick = () => { const t = $('#' + a.dataset.s); if (t) t.scrollIntoView({behavior: 'smooth', block: 'start'}); });
 
   api('/api/settings').then(s => {
-    $('#apSsid').value = s.apSsid; $('#apCh').value = s.apCh; $('#wUser').value = s.webUser; $('#wAuth').checked = s.authEnabled; $('#sSsid').value = s.staSsid;
+    $('#apSsid').value = s.apSsid; $('#apCh').value = s.apCh; $('#wUser').value = s.webUser; $('#wAuth').checked = s.authEnabled;
     paintSta(s.sta);
   }).catch(() => {});
-  api('/api/wifi/scan').then(d => { $('#sList').innerHTML = d.nets.map(n => '<option value="' + esc(n.ssid) + '">').join(''); }).catch(() => {});
+  let staNets = [];
+  const paintStaList = () => {
+    const seen = new Set(); const uniq = [];
+    staNets.forEach(n => { if (!n.hidden && !seen.has(n.ssid)) { seen.add(n.ssid); uniq.push(n); } });
+    $('#staList').innerHTML = uniq.length ? uniq.map(n => '<div class="wlrow" data-ssid="' + esc(n.ssid) + '" data-open="' + (n.auth === 'Offen' ? 1 : 0) + '" style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;cursor:pointer">' + ic(n.auth === 'Offen' ? 'unlock' : 'lock') + '<div style="flex:1;min-width:0"><b>' + esc(n.ssid) + '</b><div class="mut" style="font-size:12px">Kanal ' + n.ch + ' · ' + esc(n.auth) + '</div></div>' + sigBar(n.rssi) + '</div>').join('') : '<div class="empty">Noch keine WLANs. „WLANs suchen“ klicken.</div>';
+    $$('.wlrow', el).forEach(r => r.onclick = () => selectSta(r.dataset.ssid, r.dataset.open === '1'));
+  };
+  const selectSta = (ssid, isOpen) => {
+    $('#sSsid').value = ssid; $('#pickedName').textContent = ssid;
+    $('#sPass').value = ''; $('#staPassWrap').style.display = isOpen ? 'none' : '';
+    $('#staPickForm').style.display = '';
+    if (!isOpen) $('#sPass').focus();
+    $('#staPickForm').scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  };
+  $('#staScan').onclick = async () => {
+    $('#staScan').disabled = true; $('#staScanInfo').textContent = 'Suche läuft...';
+    if (!await act('/api/wifi/scan/start', {}, false)) { $('#staScan').disabled = false; $('#staScanInfo').textContent = ''; return; }
+    for (let i = 0; i < 40; i++) { await sleep(700); const d = await api('/api/wifi/scan').catch(() => null); if (d && d.state !== 'running') { staNets = d.nets.slice().sort((a, b) => b.rssi - a.rssi); paintStaList(); break; } }
+    $('#staScan').disabled = false; $('#staScanInfo').textContent = staNets.length + ' WLANs gefunden';
+  };
   const paintSta = sta => {
     const names = {idle: 'Nicht verbunden', connecting: 'Verbinde...', connected: 'Verbunden', failed: 'Verbindung fehlgeschlagen'};
     $('#staInfo').innerHTML = '<div>Status</div><div><span class="tag ' + (sta.state === 'connected' ? 'ok' : (sta.state === 'failed' ? 'err' : '')) + '">' + names[sta.state] + '</span></div>' + (sta.state === 'connected' ? '<div>Netzwerk</div><div>' + esc(sta.ssid) + '</div><div>IP-Adresse</div><div class="mono">' + esc(sta.ip) + '</div><div>Signal</div><div>' + sta.rssi + ' dBm</div>' : '');
@@ -731,8 +758,20 @@ VIEWS.settings = el => {
     const r = await act('/api/settings/web', {user: $('#wUser').value, oldpass: $('#wOld').value, newpass: $('#wNew').value, auth: $('#wAuth').checked ? '1' : '0'});
     if (r) { $('#wOld').value = ''; $('#wNew').value = ''; refreshStatus().catch(() => {}); }
   };
-  $('#sGo').onclick = async () => { const r = await act('/api/sta/connect', {ssid: $('#sSsid').value, pass: $('#sPass').value}, 'Verbinde...'); if (r) $('#sPass').value = ''; };
-  $('#sOff').onclick = async () => { if (confirm('Heim-WLAN trennen und Zugangsdaten löschen?')) { await act('/api/sta/disconnect', {}, 'Getrennt'); $('#sSsid').value = ''; } };
+  $('#sCancel').onclick = () => { $('#staPickForm').style.display = 'none'; };
+  $('#sGo').onclick = async () => {
+    const ssid = $('#sSsid').value;
+    if (!ssid) { toast('Bitte zuerst ein WLAN auswählen', 'err'); return; }
+    const r = await act('/api/sta/connect', {ssid, pass: $('#sPass').value}, 'Verbinde...');
+    if (r) { $('#sPass').value = ''; $('#staPickForm').style.display = 'none'; }
+  };
+  $('#sGoManual').onclick = async () => {
+    const ssid = $('#sSsidManual').value.trim();
+    if (!ssid) { toast('Bitte einen WLAN-Namen eingeben', 'err'); return; }
+    const r = await act('/api/sta/connect', {ssid, pass: $('#sPassManual').value}, 'Verbinde...');
+    if (r) $('#sPassManual').value = '';
+  };
+  $('#sOff').onclick = async () => { if (confirm('Heim-WLAN trennen und Zugangsdaten löschen?')) await act('/api/sta/disconnect', {}, 'Getrennt'); };
   $('#rst').onclick = doRestart;
   $('#fac').onclick = async () => {
     if (!confirm('ALLE Einstellungen (WLAN, Passwörter, Sperrliste) auf Werkseinstellungen zurücksetzen?')) return;

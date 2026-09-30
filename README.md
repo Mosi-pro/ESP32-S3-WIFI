@@ -120,6 +120,10 @@ Dann liefert der ESP32 simulierte WLANs, BLE-Geräte, Clients und ein simulierte
 
 **Wokwi (Simulator):** Kompilierung und der ESP32-S3 selbst werden simuliert, ebenso der Webserver im Demo-Modus. **Nicht** simulierbar sind: der eigene Access Point samt verbundener Geräte, das echte Scannen fremder WLANs, BLE, das Captive Portal und echte Geräte-Funkdaten. Diese Funktionen laufen erst auf der echten Hardware. Der Zugriff auf den Webserver im Simulator erfordert die Port-Weiterleitung von Wokwi (Gateway) und ist Wokwi-abhängig – nicht getestet.
 
+## G. Heim-WLAN wie am Handy verbinden
+
+*Einstellungen → Internet (Heim-WLAN)* → **„WLANs suchen“**. Der ESP32 zeigt die gefundenen Netze mit Signalstärke, tippe eines an. Bei einem verschlüsselten Netz erscheint ein Passwortfeld, bei einem offenen nicht - genau wie am Smartphone. Versteckte WLANs (senden keinen Namen) trägst du über „Verstecktes WLAN manuell eingeben“ ein.
+
 ## G. Firmware-Update über GitHub
 
 1. In der `.ino` oben eintragen:
