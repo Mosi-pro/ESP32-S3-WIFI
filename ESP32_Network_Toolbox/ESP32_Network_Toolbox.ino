@@ -622,6 +622,7 @@ static void loadConfig() {
 static bool checkAuth() {
   if (!g_cfg.authEnabled) return true;
   String t = g_server.header("X-Token");
+  if (t.length() != 32) t = g_server.arg("t");  // Ersatz, falls ein Proxy den Header entfernt
   if (t.length() != 32) return false;
   for (int i = 0; i < MAX_SESSIONS; i++) {
     if (g_sess[i].tok[0] && t.equals(g_sess[i].tok)) {
@@ -1803,6 +1804,7 @@ static void handleLogin() {
 
 static void handleLogout() {
   String t = g_server.header("X-Token");
+  if (t.length() != 32) t = g_server.arg("t");
   for (int i = 0; i < MAX_SESSIONS; i++)
     if (g_sess[i].tok[0] && t.equals(g_sess[i].tok)) g_sess[i].tok[0] = 0;
   sendOk("");
@@ -2223,6 +2225,7 @@ static void handleSettingsWeb() {
     hashPw(g_cfg.webSalt, newp.c_str(), g_cfg.webHash);
     g_cfg.pwDefault = false;
     String t = g_server.header("X-Token");
+    if (t.length() != 32) t = g_server.arg("t");
     dropSessionsExcept(t.c_str());
   }
   saveWebCreds();
@@ -2753,10 +2756,12 @@ const char INDEX_HTML[] PROGMEM =
 "async function api(path, data) {\n"
 "  const opt = {headers: {'X-Token': TOKEN}, cache: 'no-store'};\n"
 "  if (data !== undefined) { opt.method = 'POST'; opt.body = new URLSearchParams(data); }\n"
+"  // Token zusätzlich als URL-Parameter mitsenden (falls ein Proxy den Header entfernt)\n"
+"  const url = TOKEN && path !== '/api/login' ? path + (path.indexOf('?') < 0 ? '?' : '&') + 't=' + encodeURIComponent(TOKEN) : path;\n"
 "  let r;\n"
-"  try { r = await fetch(path, opt); } catch (e) { setConn(false); throw new Error('Keine Verbindung zum ESP32'); }\n"
+"  try { r = await fetch(url, opt); } catch (e) { setConn(false); throw new Error('Keine Verbindung zum ESP32'); }\n"
 "  setConn(true);\n"
-"  if (r.status === 401 && path !== '/api/login') { showLogin(); throw new Error('Nicht angemeldet'); }\n"
+"  if (r.status === 401 && path !== '/api/login') { showLogin('Sitzung ungültig oder abgelaufen - bitte neu anmelden.'); throw new Error('Nicht angemeldet'); }\n"
 "  let j = {};\n"
 "  try { j = await r.json(); } catch (e) {}\n"
 "  if (!r.ok || j.ok === false) throw new Error(j.error || ('Fehler ' + r.status));\n"
@@ -2796,18 +2801,20 @@ const char INDEX_HTML[] PROGMEM =
 "function sigBar(r) {\n"
 "  return '<div class=\"sig\"><b>' + r + ' dBm</b><span><i style=\"width:' + sigPct(r) + '%;background:' + sigColor(r) + '\"></i></span></div>';\n"
 "}\n"
-"function go(p) { location.hash = '#' + p; }\n"
+"let routeId = 'dashboard';\n"
+"// Interne Navigation (kein Seitenwechsel per URL: funktioniert auch in Vorschaufenstern/iframes)\n"
+"function go(p) { routeId = p; try { history.replaceState(null, '', '#' + p); } catch (e) {} route(); }\n"
 "function meter(p) { return '<div class=\"meter\"><i class=\"' + pctColor(p) + '\" style=\"width:' + clamp(p, 0, 100) + '%\"></i></div>'; }\n"
 "\n"
 "// ----------------------------------------------------------------- Login ---\n"
-"function showLogin() {\n"
+"function showLogin(msg) {\n"
 "  setToken('');\n"
 "  clearTimers();\n"
-"  if ($('#login')) return;\n"
+"  if ($('#login')) { if (msg) $('#lerr').textContent = msg; return; }\n"
 "  $('#ovl').innerHTML = '<div class=\"ovl\" id=\"login\"><form class=\"card\" id=\"lf\" autocomplete=\"on\"><div class=\"sec\">' + ic('lock') + '<h2>Anmelden</h2></div>' +\n"
 "    '<label>Benutzername</label><input id=\"lu\" name=\"username\" autocomplete=\"username\" autocapitalize=\"none\" style=\"width:100%\">' +\n"
 "    '<label>Passwort</label><input id=\"lp\" name=\"password\" type=\"password\" autocomplete=\"current-password\" style=\"width:100%\">' +\n"
-"    '<div id=\"lerr\" class=\"hint\" style=\"color:var(--err);min-height:20px\"></div>' +\n"
+"    '<div id=\"lerr\" class=\"hint\" style=\"color:var(--err);min-height:20px\">' + esc(msg || '') + '</div>' +\n"
 "    '<button class=\"btn pri\" style=\"width:100%;margin-top:6px\" type=\"submit\">Anmelden</button></form></div>';\n"
 "  $('#lu').focus();\n"
 "  $('#lf').onsubmit = async ev => {\n"
@@ -3255,7 +3262,7 @@ const char INDEX_HTML[] PROGMEM =
 "    if (!confirm('Firmware \"' + f.name + '\" jetzt installieren?')) return;\n"
 "    const fd = new FormData(); fd.append('firmware', f, f.name);\n"
 "    const x = new XMLHttpRequest();\n"
-"    x.open('POST', '/api/update/upload');\n"
+"    x.open('POST', '/api/update/upload?t=' + encodeURIComponent(TOKEN));\n"
 "    x.setRequestHeader('X-Token', TOKEN);\n"
 "    const bar = $('#uUpP'); bar.style.display = '';\n"
 "    x.upload.onprogress = e => { if (e.lengthComputable) bar.firstChild.style.width = Math.round(e.loaded * 100 / e.total) + '%'; };\n"
@@ -3284,8 +3291,7 @@ const char INDEX_HTML[] PROGMEM =
 "const PAGES = [['dashboard', 'Dashboard', 'home'], ['wifi', 'WLAN-Scanner', 'wifi'], ['channels', 'Kanäle', 'bars'], ['signal', 'Signal', 'activity'], ['myap', 'Mein WLAN', 'radio'], ['ble', 'Bluetooth', 'bt'], ['logs', 'Logs', 'list'], ['settings', 'Einstellungen', 'gear']];\n"
 "function route() {\n"
 "  if (!TOKEN && PUB.auth) return;\n"
-"  const id = (location.hash || '#dashboard').slice(1);\n"
-"  const p = PAGES.find(x => x[0] === id) || PAGES[0];\n"
+"  const p = PAGES.find(x => x[0] === routeId) || PAGES[0];\n"
 "  clearTimers();\n"
 "  if (curPage === 'signal' && p[0] !== 'signal') TRK.on = false;\n"
 "  curPage = p[0];\n"
@@ -3307,8 +3313,10 @@ const char INDEX_HTML[] PROGMEM =
 "  route();\n"
 "}\n"
 "$('#nav').innerHTML = PAGES.map(p => '<a href=\"#' + p[0] + '\" data-p=\"' + p[0] + '\">' + ic(p[2]) + '<span>' + p[1] + '</span></a>').join('');\n"
-"$('#btnOut').onclick = async () => { try { await api('/api/logout', {}); } catch (e) {} setToken(''); clearTimers(); location.hash = ''; showLogin(); };\n"
-"window.addEventListener('hashchange', route);\n"
+"$('#nav').addEventListener('click', ev => { const a = ev.target.closest('a[data-p]'); if (a) { ev.preventDefault(); go(a.dataset.p); } });\n"
+"$('#btnOut').onclick = async () => { try { await api('/api/logout', {}); } catch (e) {} setToken(''); clearTimers(); routeId = 'dashboard'; showLogin(); };\n"
+"window.addEventListener('hashchange', () => { const h = (location.hash || '').slice(1); if (h && h !== routeId && PAGES.some(x => x[0] === h)) { routeId = h; route(); } });\n"
+"try { const h0 = (location.hash || '').slice(1); if (PAGES.some(x => x[0] === h0)) routeId = h0; } catch (e) {}\n"
 "boot();\n"
 "</script>\n"
 "</body>\n"

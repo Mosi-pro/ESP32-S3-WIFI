@@ -245,8 +245,8 @@ pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-r
   window.fetch = async (url, opt) => {
     opt = opt || {};
     await new Promise(r => setTimeout(r, 40));
-    const u = new URL(url, location.href);
-    const r = handle(opt.method || 'GET', u.pathname, new URLSearchParams(opt.body ? opt.body.toString() : ''), (opt.headers || {})['X-Token']);
+    const u = new URL(String(url), 'http://esp32.vorschau/');  // feste Basis: funktioniert auch in Vorschaufenstern (about:blank, data:, iframe)
+    const r = handle(opt.method || 'GET', u.pathname, new URLSearchParams(opt.body ? opt.body.toString() : ''), (opt.headers || {})['X-Token'] || u.searchParams.get('t'));
     return new Response(JSON.stringify(r.body), { status: r.status, headers: { 'Content-Type': 'application/json' } });
   };
   window.XMLHttpRequest = function () { this.open = () => {}; this.setRequestHeader = () => {}; this.upload = {}; this.send = () => { alert('In der Vorschau ist kein Datei-Upload möglich.'); }; };
@@ -283,10 +283,12 @@ function setConn(ok) {
 async function api(path, data) {
   const opt = {headers: {'X-Token': TOKEN}, cache: 'no-store'};
   if (data !== undefined) { opt.method = 'POST'; opt.body = new URLSearchParams(data); }
+  // Token zusätzlich als URL-Parameter mitsenden (falls ein Proxy den Header entfernt)
+  const url = TOKEN && path !== '/api/login' ? path + (path.indexOf('?') < 0 ? '?' : '&') + 't=' + encodeURIComponent(TOKEN) : path;
   let r;
-  try { r = await fetch(path, opt); } catch (e) { setConn(false); throw new Error('Keine Verbindung zum ESP32'); }
+  try { r = await fetch(url, opt); } catch (e) { setConn(false); throw new Error('Keine Verbindung zum ESP32'); }
   setConn(true);
-  if (r.status === 401 && path !== '/api/login') { showLogin(); throw new Error('Nicht angemeldet'); }
+  if (r.status === 401 && path !== '/api/login') { showLogin('Sitzung ungültig oder abgelaufen - bitte neu anmelden.'); throw new Error('Nicht angemeldet'); }
   let j = {};
   try { j = await r.json(); } catch (e) {}
   if (!r.ok || j.ok === false) throw new Error(j.error || ('Fehler ' + r.status));
@@ -326,18 +328,20 @@ function sigPct(r) { return clamp(Math.round((r + 100) * 2), 4, 100); }
 function sigBar(r) {
   return '<div class="sig"><b>' + r + ' dBm</b><span><i style="width:' + sigPct(r) + '%;background:' + sigColor(r) + '"></i></span></div>';
 }
-function go(p) { location.hash = '#' + p; }
+let routeId = 'dashboard';
+// Interne Navigation (kein Seitenwechsel per URL: funktioniert auch in Vorschaufenstern/iframes)
+function go(p) { routeId = p; try { history.replaceState(null, '', '#' + p); } catch (e) {} route(); }
 function meter(p) { return '<div class="meter"><i class="' + pctColor(p) + '" style="width:' + clamp(p, 0, 100) + '%"></i></div>'; }
 
 // ----------------------------------------------------------------- Login ---
-function showLogin() {
+function showLogin(msg) {
   setToken('');
   clearTimers();
-  if ($('#login')) return;
+  if ($('#login')) { if (msg) $('#lerr').textContent = msg; return; }
   $('#ovl').innerHTML = '<div class="ovl" id="login"><form class="card" id="lf" autocomplete="on"><div class="sec">' + ic('lock') + '<h2>Anmelden</h2></div>' +
     '<label>Benutzername</label><input id="lu" name="username" autocomplete="username" autocapitalize="none" style="width:100%">' +
     '<label>Passwort</label><input id="lp" name="password" type="password" autocomplete="current-password" style="width:100%">' +
-    '<div id="lerr" class="hint" style="color:var(--err);min-height:20px"></div>' +
+    '<div id="lerr" class="hint" style="color:var(--err);min-height:20px">' + esc(msg || '') + '</div>' +
     '<button class="btn pri" style="width:100%;margin-top:6px" type="submit">Anmelden</button></form></div>';
   $('#lu').focus();
   $('#lf').onsubmit = async ev => {
@@ -785,7 +789,7 @@ function initUpdate() {
     if (!confirm('Firmware "' + f.name + '" jetzt installieren?')) return;
     const fd = new FormData(); fd.append('firmware', f, f.name);
     const x = new XMLHttpRequest();
-    x.open('POST', '/api/update/upload');
+    x.open('POST', '/api/update/upload?t=' + encodeURIComponent(TOKEN));
     x.setRequestHeader('X-Token', TOKEN);
     const bar = $('#uUpP'); bar.style.display = '';
     x.upload.onprogress = e => { if (e.lengthComputable) bar.firstChild.style.width = Math.round(e.loaded * 100 / e.total) + '%'; };
@@ -814,8 +818,7 @@ function initUpdate() {
 const PAGES = [['dashboard', 'Dashboard', 'home'], ['wifi', 'WLAN-Scanner', 'wifi'], ['channels', 'Kanäle', 'bars'], ['signal', 'Signal', 'activity'], ['myap', 'Mein WLAN', 'radio'], ['ble', 'Bluetooth', 'bt'], ['logs', 'Logs', 'list'], ['settings', 'Einstellungen', 'gear']];
 function route() {
   if (!TOKEN && PUB.auth) return;
-  const id = (location.hash || '#dashboard').slice(1);
-  const p = PAGES.find(x => x[0] === id) || PAGES[0];
+  const p = PAGES.find(x => x[0] === routeId) || PAGES[0];
   clearTimers();
   if (curPage === 'signal' && p[0] !== 'signal') TRK.on = false;
   curPage = p[0];
@@ -837,8 +840,10 @@ async function boot() {
   route();
 }
 $('#nav').innerHTML = PAGES.map(p => '<a href="#' + p[0] + '" data-p="' + p[0] + '">' + ic(p[2]) + '<span>' + p[1] + '</span></a>').join('');
-$('#btnOut').onclick = async () => { try { await api('/api/logout', {}); } catch (e) {} setToken(''); clearTimers(); location.hash = ''; showLogin(); };
-window.addEventListener('hashchange', route);
+$('#nav').addEventListener('click', ev => { const a = ev.target.closest('a[data-p]'); if (a) { ev.preventDefault(); go(a.dataset.p); } });
+$('#btnOut').onclick = async () => { try { await api('/api/logout', {}); } catch (e) {} setToken(''); clearTimers(); routeId = 'dashboard'; showLogin(); };
+window.addEventListener('hashchange', () => { const h = (location.hash || '').slice(1); if (h && h !== routeId && PAGES.some(x => x[0] === h)) { routeId = h; route(); } });
+try { const h0 = (location.hash || '').slice(1); if (PAGES.some(x => x[0] === h0)) routeId = h0; } catch (e) {}
 boot();
 </script>
 </body>
