@@ -108,7 +108,15 @@ Dann liefert der ESP32 simulierte WLANs, BLE-Geräte, Clients und ein simulierte
 
 **Ohne ESP32 – Browser-Vorschau:** Die Datei `Vorschau/Vorschau.html` per Doppelklick im Browser öffnen (Login `admin` / `admin123`). Dort läuft die komplette Weboberfläche gegen einen simulierten ESP32 (Fake-WLANs, BLE-Geräte, Update-Ablauf). Es wird nichts an einen ESP32 gesendet; Datei-Upload ist in der Vorschau deaktiviert.
 
-**Simulatoren (Wokwi, Velxio …):** Die Adresse `192.168.4.1` ist dort von deinem Browser aus **nicht** erreichbar – der Access Point existiert nur im Simulator, nicht in deinem Netzwerk. Nutze dafür die Browser-Vorschau oben oder den echten ESP32.
+**Simulatoren (Wokwi, Velxio …):** Die Adresse `192.168.4.1` ist dort von deinem Browser aus **nicht** erreichbar – der Access Point existiert nur im Simulator, nicht in deinem Netzwerk. Zwei Möglichkeiten:
+
+1. **Simulator-Modus:** Oben in der `.ino` einstellen
+   ```cpp
+   #define SIMULATOR_WIFI_SSID "Velxio-GUEST"   // Wokwi: "Wokwi-GUEST"
+   #define DEMO_MODE 1                          // simulierte WLAN-/BLE-Daten
+   ```
+   Der ESP32 verbindet sich dann als Station mit dem Simulator-WLAN (kein eigener Access Point) und schreibt im Seriellen Monitor `Webinterface: http://192.168.x.x`. Diese Adresse im Simulator anklicken. Für den echten ESP32 wieder `""` und `0` einstellen.
+2. Die Browser-Vorschau oben oder den echten ESP32 verwenden.
 
 **Wokwi (Simulator):** Kompilierung und der ESP32-S3 selbst werden simuliert, ebenso der Webserver im Demo-Modus. **Nicht** simulierbar sind: der eigene Access Point samt verbundener Geräte, das echte Scannen fremder WLANs, BLE, das Captive Portal und echte Geräte-Funkdaten. Diese Funktionen laufen erst auf der echten Hardware. Der Zugriff auf den Webserver im Simulator erfordert die Port-Weiterleitung von Wokwi (Gateway) und ist Wokwi-abhängig – nicht getestet.
 

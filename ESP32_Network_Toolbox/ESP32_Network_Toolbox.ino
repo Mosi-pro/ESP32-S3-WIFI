@@ -45,6 +45,14 @@
 // So kannst du die Weboberflaeche ausprobieren, ohne echte Umgebung.
 #define DEMO_MODE             0
 
+// --- Simulator (Velxio, Wokwi ...): dort gibt es keinen erreichbaren Access Point.
+// Trage hier das Simulator-WLAN ein, dann verbindet sich der ESP32 als Station
+// damit (kein eigener AP) und zeigt im Seriellen Monitor die klickbare IP-Adresse.
+//   Velxio: "Velxio-GUEST"    Wokwi: "Wokwi-GUEST"    (beide ohne Passwort)
+// Fuer den echten ESP32 leer lassen: ""
+#define SIMULATOR_WIFI_SSID   ""
+#define SIMULATOR_WIFI_PASS   ""
+
 // --- Standardwerte beim ersten Start / nach Werkseinstellungen ---------------
 #define DEFAULT_AP_SSID       "ESP32-NetworkTool"
 #define DEFAULT_AP_PASS       "esp32setup"      // mind. 8 Zeichen
@@ -740,6 +748,7 @@ static void tickSta() {
         g_staState = STA_CONNECTED;
         g_needNtp = true;
         addLog(0, "Heim-WLAN verbunden, IP %s", WiFi.localIP().toString().c_str());
+        addLog(0, "Webinterface: http://%s", WiFi.localIP().toString().c_str());
       } else if ((uint32_t)(millis() - g_staT0) > 20000UL) {
         WiFi.disconnect(false, false);
         g_staState = STA_FAILED;
@@ -2379,7 +2388,7 @@ static void handleUploadData() {
 
 static void redirectToRoot() {
   g_server.sendHeader("Cache-Control", "no-store");
-  g_server.sendHeader("Location", String("http://") + WiFi.softAPIP().toString() + "/", true);
+  g_server.sendHeader("Location", String("http://") + (g_apUp ? WiFi.softAPIP().toString() : WiFi.localIP().toString()) + "/", true);
   g_server.send(302, "text/plain", "");
 }
 
@@ -2476,21 +2485,31 @@ void setup() {
 
   WiFi.persistent(false);  // WLAN-Zugangsdaten verwalten wir selbst (Preferences)
   WiFi.setHostname(MDNS_NAME);
-  WiFi.mode(WIFI_AP_STA);
   WiFi.onEvent(onWifiEvent);
 
-  if (applyAp(g_cfg.apSsid, g_cfg.apPass, g_cfg.apCh)) {
-    addLog(0, "Access Point gestartet: %s", g_cfg.apSsid);
+  if (SIMULATOR_WIFI_SSID[0]) {
+    // Simulator-Betrieb: nur Station, kein Access Point
+    WiFi.mode(WIFI_STA);
+    g_apWanted = false;
+    strlcpy(g_cfg.staSsid, SIMULATOR_WIFI_SSID, sizeof(g_cfg.staSsid));
+    strlcpy(g_cfg.staPass, SIMULATOR_WIFI_PASS, sizeof(g_cfg.staPass));
+    addLog(1, "SIMULATOR-MODUS: verbinde mit '%s' (kein Access Point)", SIMULATOR_WIFI_SSID);
+    staConnect();
   } else {
-    addLog(2, "Access Point konnte nicht gestartet werden");
+    WiFi.mode(WIFI_AP_STA);
+    if (applyAp(g_cfg.apSsid, g_cfg.apPass, g_cfg.apCh)) {
+      addLog(0, "Access Point gestartet: %s", g_cfg.apSsid);
+    } else {
+      addLog(2, "Access Point konnte nicht gestartet werden");
+    }
+    if (g_cfg.staSsid[0]) staConnect();
   }
-  if (g_cfg.staSsid[0]) staConnect();
 
   if (MDNS.begin(MDNS_NAME)) MDNS.addService("http", "tcp", 80);
 
   setupRoutes();
   g_server.begin();
-  addLog(0, "Webserver bereit: http://192.168.4.1");
+  addLog(0, "Webserver bereit (Access Point: http://192.168.4.1)");
   if (DEMO_MODE) addLog(1, "DEMO-MODUS aktiv: WLAN/BLE/Update-Daten sind simuliert");
   if (strcmp(g_cfg.apPass, DEFAULT_AP_PASS) == 0) addLog(1, "Standard-WLAN-Passwort in Benutzung - bitte ändern");
 }
