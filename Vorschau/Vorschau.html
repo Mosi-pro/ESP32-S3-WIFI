@@ -178,7 +178,7 @@ pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-r
     ap: true, apSsid: 'ESP32-NetworkTool', apCh: 6, scan: 'idle', nets: [], scanAt: 0, trackMode: false, ble: 'ready', bleDevs: [], bleEnd: 0,
     blocked: ['3C:22:FB:9A:BC:DE'], logs: [], test: { active: false, idx: 0, count: 0, interval: 30, names: [] }, trackRssi: -55,
     sta: { state: 'idle', ssid: '', ip: '', rssi: 0 }, upd: { checked: false, available: false, phase: 'idle', pct: 0, msg: '', busy: false, latest: '', notes: '', date: '' }, updT: 0,
-    routerMode: false, portalMode: 0, portalTitle: 'Willkommen im WLAN', tickets: [], guests: [] };
+    routerMode: false, portalMode: 0, portalTitle: 'Willkommen im WLAN', guestSsid: 'ESP32-Gaeste-WLAN', tickets: [], guests: [] };
   try { if (sessionStorage.getItem('vorschauUpdated')) { S.notice = 'Update erfolgreich auf v1.0.1 aktualisiert'; sessionStorage.removeItem('vorschauUpdated'); S.pwDefault = false; } } catch (e) {}
   const up = () => Math.floor((Date.now() - S.t0) / 1000) + 100;
   const log = (l, m) => S.logs.push({ t: up(), l, m });
@@ -189,7 +189,7 @@ pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-r
   const status = () => ({ fw: '1.0.0', board: 'ESP32-S3 N16R8', up: up(), demo: true, auth: S.auth, notice: S.notice,
     chip: { model: 'ESP32-S3', rev: 2, cores: 2, mhz: 240, mac: 'AA:BB:CC:DD:EE:FF', sdk: 'v5.5.1', core: '3.3.12', temp: 41.3 },
     mem: { heap: 340000, free: 210000 - (S.ble === 'scanning' ? 30000 : 0), minFree: 190000, psram: 8388608, psramFree: 8100000, flash: 16777216, sketch: 1310720, sketchFree: 3145728 },
-    wifi: { ap: S.ap, ssid: S.test.active ? S.test.names[S.test.idx] : S.apSsid, ch: S.apCh, ip: '192.168.4.1', clients: 1, test: S.test.active, found: S.nets.length, scanning: S.scan === 'running' && !S.trackMode, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, guestsOnline: S.guests.length, sta: S.sta },
+    wifi: { ap: S.ap, ssid: S.test.active ? S.test.names[S.test.idx] : (S.portalMode ? S.guestSsid : S.apSsid), ch: S.apCh, ip: '192.168.4.1', clients: 1, test: S.test.active, found: S.nets.length, scanning: S.scan === 'running' && !S.trackMode, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, guestsOnline: S.guests.length, sta: S.sta },
     ble: { state: S.ble, found: S.bleDevs.length }, warn: { defaultWeb: S.pwDefault, defaultAp: true } });
   function tick() {
     const now = Date.now();
@@ -235,8 +235,8 @@ pre.notes{white-space:pre-wrap;word-break:break-word;background:#0e1628;border-r
       case '/api/ble/clear': S.bleDevs = []; log(0, 'BLE-Ergebnisse gelöscht'); return ok();
       case '/api/logs': return R(200, { logs: S.logs });
       case '/api/logs/clear': S.logs = []; return ok();
-      case '/api/settings': return R(200, { apSsid: S.apSsid, apCh: S.apCh, webUser: S.user, authEnabled: S.auth, staSsid: S.sta.ssid, hasStaPass: false, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, portalTitle: S.portalTitle, sta: S.sta });
-      case '/api/portal/save': S.portalMode = +a.get('mode'); S.portalTitle = a.get('title'); log(0, 'Einstellungen gespeichert (Gäste-Portal)'); return ok('Gespeichert.');
+      case '/api/settings': return R(200, { apSsid: S.apSsid, apCh: S.apCh, webUser: S.user, authEnabled: S.auth, staSsid: S.sta.ssid, hasStaPass: false, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, portalTitle: S.portalTitle, guestSsid: S.guestSsid, activeIsGuest: S.portalMode !== 0, sta: S.sta });
+      case '/api/portal/save': S.portalMode = +a.get('mode'); S.portalTitle = a.get('title'); if (a.get('gSsid')) S.guestSsid = a.get('gSsid'); log(0, 'Einstellungen gespeichert (Gäste-Portal)'); return ok(S.portalMode ? 'Gespeichert. Das gesendete WLAN wechselt jetzt - bitte neu verbinden.' : 'Gespeichert.');
       case '/api/tickets': return R(200, { tickets: S.tickets, max: 40 });
       case '/api/tickets/create': { let pin; do { pin = String(100000 + Math.floor(Math.random() * 900000)); } while (S.tickets.some(t => t.pin === pin)); S.tickets.push({ pin, used: false, note: a.get('note') || '', createdAt: up(), usedAt: 0 }); log(0, 'Ticket erstellt: ' + pin); return R(200, { ok: true, pin }); }
       case '/api/tickets/delete': S.tickets = S.tickets.filter(t => t.pin !== a.get('pin')); return ok();
@@ -731,6 +731,8 @@ VIEWS.settings = el => {
     '<div class="card" id="s-guest"><div class="sec">' + ic('users') + '<h2>Gäste-Portal</h2></div>' +
     '<div class="hint" style="margin:0 0 14px">Geräte an deinem Access Point sehen erst eine eigene Anmeldeseite, bevor sie Internet bekommen (braucht aktiven Router-Modus oben). Kein Nachbau eines echten Anbieters - eine eigene, klar erkennbare Seite.</div>' +
     '<label>Modus</label><select id="gMode"><option value="0">Aus (heutiges Verhalten: direkt zur eigenen Oberfläche)</option><option value="1">Einfach (ein „Verbinden“-Knopf)</option><option value="2">Ticket-System (6-stelliger Anmeldecode, einmal gültig)</option></select>' +
+    '<div class="banner info" id="gRadioHint" style="display:none;margin:14px 0 0">' + ic('wifi') + '<span>Dein ESP32 hat nur ein WLAN-Funkmodul: Sobald das Gäste-Portal eingeschaltet ist, sendet er <b>dieses Gäste-WLAN statt deines Steuerungs-WLANs</b>. Die Verwaltungsoberfläche bleibt darin unter <span class="mono">/admin</span> erreichbar.</span></div>' +
+    '<label>WLAN-Name für Gäste</label><input id="gSsid" maxlength="32" style="width:100%;max-width:380px"><label>WLAN-Passwort für Gäste (8-63 Zeichen, leer = unverändert)</label><input id="gPass" type="password" autocomplete="new-password" maxlength="63" placeholder="unverändert" style="width:100%;max-width:380px">' +
     '<label>Titel auf der Anmeldeseite</label><input id="gTitle" maxlength="64" style="width:100%;max-width:380px">' +
     '<div style="margin-top:14px"><button class="btn pri" id="gSave">Speichern</button></div>' +
     '<div id="gTicketBox" style="display:none;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)">' +
@@ -743,8 +745,9 @@ VIEWS.settings = el => {
 
   api('/api/settings').then(s => {
     $('#apSsid').value = s.apSsid; $('#apCh').value = s.apCh; $('#wUser').value = s.webUser; $('#wAuth').checked = s.authEnabled;
-    $('#apRouter').checked = s.routerMode; $('#gMode').value = s.portalMode; $('#gTitle').value = s.portalTitle;
+    $('#apRouter').checked = s.routerMode; $('#gMode').value = s.portalMode; $('#gTitle').value = s.portalTitle; $('#gSsid').value = s.guestSsid;
     $('#gTicketBox').style.display = s.portalMode == 2 ? '' : 'none';
+    $('#gRadioHint').style.display = s.portalMode != 0 ? '' : 'none';
     paintSta(s.sta);
   }).catch(() => {});
   let staNets = [];
@@ -782,8 +785,15 @@ VIEWS.settings = el => {
     const r = await act('/api/ap/save', {ssid: $('#apSsid').value, pass: $('#apPass').value, ch: $('#apCh').value, router: $('#apRouter').checked ? '1' : '0'});
     if (r) { $('#apPass').value = ''; toast('Gespeichert. WLAN startet neu - bitte neu verbinden.', 'ok'); }
   };
-  $('#gMode').addEventListener('change', () => { $('#gTicketBox').style.display = $('#gMode').value == 2 ? '' : 'none'; });
-  $('#gSave').onclick = async () => { await act('/api/portal/save', {mode: $('#gMode').value, title: $('#gTitle').value}); };
+  $('#gMode').addEventListener('change', () => {
+    $('#gTicketBox').style.display = $('#gMode').value == 2 ? '' : 'none';
+    $('#gRadioHint').style.display = $('#gMode').value != 0 ? '' : 'none';
+  });
+  $('#gSave').onclick = async () => {
+    if ($('#gMode').value != 0 && !confirm('Speichern? Der ESP32 sendet danach das Gäste-WLAN statt des Steuerungs-WLANs - du musst dich neu verbinden.')) return;
+    const r = await act('/api/portal/save', {mode: $('#gMode').value, title: $('#gTitle').value, gSsid: $('#gSsid').value, gPass: $('#gPass').value});
+    if (r) $('#gPass').value = '';
+  };
   $('#wSave').onclick = async () => {
     const r = await act('/api/settings/web', {user: $('#wUser').value, oldpass: $('#wOld').value, newpass: $('#wNew').value, auth: $('#wAuth').checked ? '1' : '0'});
     if (r) { $('#wOld').value = ''; $('#wNew').value = ''; refreshStatus().catch(() => {}); }

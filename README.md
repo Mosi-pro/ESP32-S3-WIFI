@@ -144,7 +144,9 @@ Unter *Einstellungen → Gäste-Portal* lässt sich eine eigene, öffentliche An
 * **Einfach** - ein Knopf „Verbinden", danach ist das Gerät angemeldet.
 * **Ticket-System** - Geräte müssen einen 6-stelligen, **einmal gültigen** Anmeldecode eingeben. Unter *Einstellungen → Gäste-Portal → Tickets* erstellst du Tickets (mit optionalem Namen/Kommentar), siehst ihren Status (frei/verwendet) und kannst sie als Textdatei herunterladen, um sie z. B. auszudrucken oder einzeln zu verschicken - das Verschicken selbst übernimmt der ESP32 nicht, das machst du wie gewohnt (WhatsApp, E-Mail, Zettel).
 
-**Admin-Zugriff bleibt immer möglich:** Auch wenn das Gäste-Portal aktiv ist, erreichst du die normale Verwaltungsoberfläche jederzeit unter `http://192.168.4.1/admin`.
+**Eigenes WLAN für Gäste - getrennt vom Steuerungs-WLAN:** Unter *Einstellungen → Gäste-Portal* trägst du einen eigenen WLAN-Namen und ein eigenes Passwort für Gäste ein (Standard: `ESP32-Gäste-WLAN`). Sobald ein Modus (Einfach oder Ticket-System) aktiv ist, sendet der ESP32 **dieses** WLAN - nicht mehr das Steuerungs-WLAN aus den Access-Point-Einstellungen. **Wichtig:** Der ESP32 hat nur ein einziges WLAN-Funkmodul und kann deshalb nicht zwei Netze gleichzeitig senden (dieselbe Einschränkung wie bei den Test-WLANs). „Getrennt" heißt hier: ein eigener Name und ein eigenes Passwort, nicht zwei gleichzeitig sendende Funknetze.
+
+**Admin-Zugriff bleibt immer möglich:** Auch wenn gerade das Gäste-WLAN gesendet wird, erreichst du die normale Verwaltungsoberfläche über `http://192.168.4.1/admin` - verbinde dich dafür einfach mit dem aktuell gesendeten WLAN (Dashboard zeigt an, welches das ist) und öffne `/admin` statt `/`.
 
 **Wichtiger Hinweis zum Design:** Die Anmeldeseite ist bewusst ein **eigenes, generisches Design** (blau/weiß, ohne fremde Logos). Es wird **kein** echter Anbieter nachgebaut (z. B. Bayern-WLAN oder ähnliche Dienste) - eine solche Kopie wäre eine Phishing-Falle: Nutzer könnten denken, sie seien im echten, offiziellen Netz, und dort z. B. echte Zugangsdaten eingeben. Das schließt dieses Projekt konsequent aus (siehe Abschnitt „Sicherheit" oben im Projektauftrag).
 

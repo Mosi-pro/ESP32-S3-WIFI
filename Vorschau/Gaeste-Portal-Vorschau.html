@@ -53,7 +53,7 @@ button.ghost{background:transparent;color:var(--mut);border:1.5px solid var(--li
     ap: true, apSsid: 'ESP32-NetworkTool', apCh: 6, scan: 'idle', nets: [], scanAt: 0, trackMode: false, ble: 'ready', bleDevs: [], bleEnd: 0,
     blocked: ['3C:22:FB:9A:BC:DE'], logs: [], test: { active: false, idx: 0, count: 0, interval: 30, names: [] }, trackRssi: -55,
     sta: { state: 'connected', ssid: 'Schul-WLAN (Beispiel)', ip: '192.168.178.44', rssi: -52 }, upd: { checked: false, available: false, phase: 'idle', pct: 0, msg: '', busy: false, latest: '', notes: '', date: '' }, updT: 0,
-    routerMode: true, portalMode: 2, portalTitle: 'Klassen-WLAN', tickets: [{pin:'123456',used:false,note:'Test-Ticket',createdAt:0,usedAt:0}], guests: [] };
+    routerMode: true, portalMode: 2, portalTitle: 'Klassen-WLAN', guestSsid: 'Klassen-WLAN-Gast', tickets: [{pin:'123456',used:false,note:'Test-Ticket',createdAt:0,usedAt:0}], guests: [] };
   try { if (sessionStorage.getItem('vorschauUpdated')) { S.notice = 'Update erfolgreich auf v1.0.1 aktualisiert'; sessionStorage.removeItem('vorschauUpdated'); S.pwDefault = false; } } catch (e) {}
   const up = () => Math.floor((Date.now() - S.t0) / 1000) + 100;
   const log = (l, m) => S.logs.push({ t: up(), l, m });
@@ -64,7 +64,7 @@ button.ghost{background:transparent;color:var(--mut);border:1.5px solid var(--li
   const status = () => ({ fw: '1.0.0', board: 'ESP32-S3 N16R8', up: up(), demo: true, auth: S.auth, notice: S.notice,
     chip: { model: 'ESP32-S3', rev: 2, cores: 2, mhz: 240, mac: 'AA:BB:CC:DD:EE:FF', sdk: 'v5.5.1', core: '3.3.12', temp: 41.3 },
     mem: { heap: 340000, free: 210000 - (S.ble === 'scanning' ? 30000 : 0), minFree: 190000, psram: 8388608, psramFree: 8100000, flash: 16777216, sketch: 1310720, sketchFree: 3145728 },
-    wifi: { ap: S.ap, ssid: S.test.active ? S.test.names[S.test.idx] : S.apSsid, ch: S.apCh, ip: '192.168.4.1', clients: 1, test: S.test.active, found: S.nets.length, scanning: S.scan === 'running' && !S.trackMode, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, guestsOnline: S.guests.length, sta: S.sta },
+    wifi: { ap: S.ap, ssid: S.test.active ? S.test.names[S.test.idx] : (S.portalMode ? S.guestSsid : S.apSsid), ch: S.apCh, ip: '192.168.4.1', clients: 1, test: S.test.active, found: S.nets.length, scanning: S.scan === 'running' && !S.trackMode, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, guestsOnline: S.guests.length, sta: S.sta },
     ble: { state: S.ble, found: S.bleDevs.length }, warn: { defaultWeb: S.pwDefault, defaultAp: true } });
   function tick() {
     const now = Date.now();
@@ -110,8 +110,8 @@ button.ghost{background:transparent;color:var(--mut);border:1.5px solid var(--li
       case '/api/ble/clear': S.bleDevs = []; log(0, 'BLE-Ergebnisse gelöscht'); return ok();
       case '/api/logs': return R(200, { logs: S.logs });
       case '/api/logs/clear': S.logs = []; return ok();
-      case '/api/settings': return R(200, { apSsid: S.apSsid, apCh: S.apCh, webUser: S.user, authEnabled: S.auth, staSsid: S.sta.ssid, hasStaPass: false, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, portalTitle: S.portalTitle, sta: S.sta });
-      case '/api/portal/save': S.portalMode = +a.get('mode'); S.portalTitle = a.get('title'); log(0, 'Einstellungen gespeichert (Gäste-Portal)'); return ok('Gespeichert.');
+      case '/api/settings': return R(200, { apSsid: S.apSsid, apCh: S.apCh, webUser: S.user, authEnabled: S.auth, staSsid: S.sta.ssid, hasStaPass: false, routerMode: S.routerMode, routerActive: S.routerMode && S.sta.state === 'connected', portalMode: S.portalMode, portalTitle: S.portalTitle, guestSsid: S.guestSsid, activeIsGuest: S.portalMode !== 0, sta: S.sta });
+      case '/api/portal/save': S.portalMode = +a.get('mode'); S.portalTitle = a.get('title'); if (a.get('gSsid')) S.guestSsid = a.get('gSsid'); log(0, 'Einstellungen gespeichert (Gäste-Portal)'); return ok(S.portalMode ? 'Gespeichert. Das gesendete WLAN wechselt jetzt - bitte neu verbinden.' : 'Gespeichert.');
       case '/api/tickets': return R(200, { tickets: S.tickets, max: 40 });
       case '/api/tickets/create': { let pin; do { pin = String(100000 + Math.floor(Math.random() * 900000)); } while (S.tickets.some(t => t.pin === pin)); S.tickets.push({ pin, used: false, note: a.get('note') || '', createdAt: up(), usedAt: 0 }); log(0, 'Ticket erstellt: ' + pin); return R(200, { ok: true, pin }); }
       case '/api/tickets/delete': S.tickets = S.tickets.filter(t => t.pin !== a.get('pin')); return ok();

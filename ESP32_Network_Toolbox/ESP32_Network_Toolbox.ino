@@ -82,6 +82,12 @@
 #define MAX_TICKETS           40
 #define MAX_GUESTS             16
 #define DEFAULT_PORTAL_TITLE  "Willkommen im WLAN"
+// Eigenes WLAN fuer das Gaeste-Portal (separat vom Steuerungs-WLAN oben).
+// Der ESP32 hat nur EIN Funkmodul: Solange das Gaeste-Portal eingeschaltet ist,
+// sendet er dieses Gaeste-WLAN statt des normalen Access Points - die
+// Verwaltungsoberflaeche bleibt darin unter /admin erreichbar.
+#define DEFAULT_GUEST_SSID    "ESP32-Gaeste-WLAN"
+#define DEFAULT_GUEST_PASS    "gastzugang"        // mind. 8 Zeichen
 
 // ============================================================================
 //  2) BIBLIOTHEKEN (alle im ESP32-Board-Paket enthalten)
@@ -157,6 +163,8 @@ struct Config {
   bool routerMode;     // Internet vom Heim-WLAN ueber den eigenen AP teilen (NAT)
   uint8_t portalMode;  // 0 = aus (heutiges Verhalten), 1 = Einfach, 2 = Ticket-System
   char portalTitle[65];
+  char guestSsid[33];  // eigenes WLAN fuer das Gaeste-Portal (separat vom Access Point oben)
+  char guestPass[65];
 };
 
 struct LogEntry {
@@ -243,6 +251,8 @@ enum StaState { STA_IDLE = 0, STA_CONNECTING, STA_CONNECTED, STA_FAILED };
 // Vorwaertsdeklaration der Gaeste-Portal-Seite (eigenes, generisches Design -
 // KEIN Nachbau eines echten Anbieters; steht ganz unten in dieser Datei)
 extern const char PORTAL_HTML[] PROGMEM;
+static const char *activeApSsid();
+static const char *activeApPass();
 
 static Config g_cfg;
 static WebServer g_server(80);
@@ -701,6 +711,13 @@ static void loadConfig() {
   if (s.length() < 1 || s.length() > 64) s = DEFAULT_PORTAL_TITLE;
   strlcpy(g_cfg.portalTitle, s.c_str(), sizeof(g_cfg.portalTitle));
 
+  s = g_prefs.getString("guest_ssid", DEFAULT_GUEST_SSID);
+  if (s.length() < 1 || s.length() > 32) s = DEFAULT_GUEST_SSID;
+  strlcpy(g_cfg.guestSsid, s.c_str(), sizeof(g_cfg.guestSsid));
+  s = g_prefs.getString("guest_pass", DEFAULT_GUEST_PASS);
+  if (s.length() < 8 || s.length() > 63) s = DEFAULT_GUEST_PASS;
+  strlcpy(g_cfg.guestPass, s.c_str(), sizeof(g_cfg.guestPass));
+
   loadBlocked();
   loadTickets();
 }
@@ -918,7 +935,7 @@ static void testStop() {
   if (!g_testActive) return;
   g_testActive = false;
   addLog(0, "Test-WLANs gestoppt");
-  if (g_apWanted) applyAp(g_cfg.apSsid, g_cfg.apPass, g_cfg.apCh);
+  if (g_apWanted) applyAp(activeApSsid(), activeApPass(), g_cfg.apCh);
 }
 
 static void tickTest() {
@@ -1084,6 +1101,18 @@ static void savePortalCfg() {
   g_prefs.putBool("router", g_cfg.routerMode);
   g_prefs.putUChar("portal_m", g_cfg.portalMode);
   g_prefs.putString("portal_t", g_cfg.portalTitle);
+  g_prefs.putString("guest_ssid", g_cfg.guestSsid);
+  g_prefs.putString("guest_pass", g_cfg.guestPass);
+}
+
+// Welches WLAN der Access Point gerade senden soll: Solange das Gaeste-Portal
+// eingeschaltet ist, das eigene Gaeste-WLAN - sonst das normale Steuerungs-WLAN.
+// (Der ESP32 hat nur ein Funkmodul und kann nicht beide gleichzeitig senden.)
+static const char *activeApSsid() {
+  return g_cfg.portalMode ? g_cfg.guestSsid : g_cfg.apSsid;
+}
+static const char *activeApPass() {
+  return g_cfg.portalMode ? g_cfg.guestPass : g_cfg.apPass;
 }
 
 // ---- Eigener, kleiner DNS-Server (loest DNSServer.h ab) --------------------
@@ -2332,7 +2361,7 @@ static void handleApStart() {
   NEED_AUTH();
   g_apWanted = true;
   if (g_testActive) testStop();
-  else if (!applyAp(g_cfg.apSsid, g_cfg.apPass, g_cfg.apCh)) { sendErr(500, "Access Point konnte nicht gestartet werden"); return; }
+  else if (!applyAp(activeApSsid(), activeApPass(), g_cfg.apCh)) { sendErr(500, "Access Point konnte nicht gestartet werden"); return; }
   addLog(0, "Access Point gestartet");
   sendOk("");
 }
@@ -2558,6 +2587,8 @@ static void handleSettingsGet() {
   jB(o, "routerActive", g_routerActive);
   jI(o, "portalMode", g_cfg.portalMode);
   jS(o, "portalTitle", g_cfg.portalTitle);
+  jS(o, "guestSsid", g_cfg.guestSsid);
+  jB(o, "activeIsGuest", g_cfg.portalMode != 0);
   appendSta(o);
   jClose(o, '}');
   sendJson(200, o);
@@ -2567,14 +2598,27 @@ static void handlePortalSave() {
   NEED_AUTH();
   int mode = g_server.arg("mode").toInt();
   String title = g_server.arg("title");
+  String gSsid = g_server.arg("gSsid");
+  String gPass = g_server.arg("gPass");
   title.trim();
+  gSsid.trim();
   if (mode < 0 || mode > 2) { sendErr(400, "Ungültiger Modus"); return; }
   if (title.length() < 1 || title.length() > 64) { sendErr(400, "Titel muss 1 bis 64 Zeichen lang sein"); return; }
+  if (gSsid.length() < 1 || gSsid.length() > 32) { sendErr(400, "Gäste-WLAN-Name muss 1 bis 32 Zeichen lang sein"); return; }
+  if (gPass.length() && (gPass.length() < 8 || gPass.length() > 63)) { sendErr(400, "Gäste-WLAN-Passwort muss 8 bis 63 Zeichen lang sein"); return; }
+  bool modeChanged = ((uint8_t)mode != g_cfg.portalMode) || (gSsid != g_cfg.guestSsid);
   g_cfg.portalMode = (uint8_t)mode;
   strlcpy(g_cfg.portalTitle, title.c_str(), sizeof(g_cfg.portalTitle));
+  strlcpy(g_cfg.guestSsid, gSsid.c_str(), sizeof(g_cfg.guestSsid));
+  if (gPass.length()) strlcpy(g_cfg.guestPass, gPass.c_str(), sizeof(g_cfg.guestPass));
   savePortalCfg();
   addLog(0, "Einstellungen gespeichert (Gäste-Portal: %s)", mode == 0 ? "aus" : (mode == 2 ? "Ticket-System" : "Einfach"));
-  sendOk("Gespeichert.");
+  String msg = "Gespeichert.";
+  if (modeChanged && g_apWanted && !g_testActive) {
+    g_apRestartAt = millis() + 800UL;  // Funknetz wechselt (Gaeste-WLAN <-> Steuerungs-WLAN)
+    msg = "Gespeichert. Das gesendete WLAN wechselt jetzt - bitte neu verbinden.";
+  }
+  sendOk(msg.c_str());
 }
 
 static void handleSettingsWeb() {
@@ -3019,8 +3063,8 @@ void setup() {
     staConnect();
   } else {
     WiFi.mode(WIFI_AP_STA);
-    if (applyAp(g_cfg.apSsid, g_cfg.apPass, g_cfg.apCh)) {
-      addLog(0, "Access Point gestartet: %s", g_cfg.apSsid);
+    if (applyAp(activeApSsid(), activeApPass(), g_cfg.apCh)) {
+      addLog(0, "Access Point gestartet: %s", activeApSsid());
     } else {
       addLog(2, "Access Point konnte nicht gestartet werden");
     }
@@ -3055,7 +3099,7 @@ void loop() {
   if (g_apRestartAt && (int32_t)(millis() - g_apRestartAt) >= 0) {
     g_apRestartAt = 0;
     if (g_apWanted) {
-      if (applyAp(g_cfg.apSsid, g_cfg.apPass, g_cfg.apCh)) addLog(0, "Access Point gestartet: %s", g_cfg.apSsid);
+      if (applyAp(activeApSsid(), activeApPass(), g_cfg.apCh)) addLog(0, "Access Point gestartet: %s", activeApSsid());
     } else {
       stopAp();
       addLog(0, "Access Point gestoppt");
@@ -3713,6 +3757,8 @@ const char INDEX_HTML[] PROGMEM =
 "    '<div class=\"card\" id=\"s-guest\"><div class=\"sec\">' + ic('users') + '<h2>Gäste-Portal</h2></div>' +\n"
 "    '<div class=\"hint\" style=\"margin:0 0 14px\">Geräte an deinem Access Point sehen erst eine eigene Anmeldeseite, bevor sie Internet bekommen (braucht aktiven Router-Modus oben). Kein Nachbau eines echten Anbieters - eine eigene, klar erkennbare Seite.</div>' +\n"
 "    '<label>Modus</label><select id=\"gMode\"><option value=\"0\">Aus (heutiges Verhalten: direkt zur eigenen Oberfläche)</option><option value=\"1\">Einfach (ein „Verbinden“-Knopf)</option><option value=\"2\">Ticket-System (6-stelliger Anmeldecode, einmal gültig)</option></select>' +\n"
+"    '<div class=\"banner info\" id=\"gRadioHint\" style=\"display:none;margin:14px 0 0\">' + ic('wifi') + '<span>Dein ESP32 hat nur ein WLAN-Funkmodul: Sobald das Gäste-Portal eingeschaltet ist, sendet er <b>dieses Gäste-WLAN statt deines Steuerungs-WLANs</b>. Die Verwaltungsoberfläche bleibt darin unter <span class=\"mono\">/admin</span> erreichbar.</span></div>' +\n"
+"    '<label>WLAN-Name für Gäste</label><input id=\"gSsid\" maxlength=\"32\" style=\"width:100%;max-width:380px\"><label>WLAN-Passwort für Gäste (8-63 Zeichen, leer = unverändert)</label><input id=\"gPass\" type=\"password\" autocomplete=\"new-password\" maxlength=\"63\" placeholder=\"unverändert\" style=\"width:100%;max-width:380px\">' +\n"
 "    '<label>Titel auf der Anmeldeseite</label><input id=\"gTitle\" maxlength=\"64\" style=\"width:100%;max-width:380px\">' +\n"
 "    '<div style=\"margin-top:14px\"><button class=\"btn pri\" id=\"gSave\">Speichern</button></div>' +\n"
 "    '<div id=\"gTicketBox\" style=\"display:none;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)\">' +\n"
@@ -3725,8 +3771,9 @@ const char INDEX_HTML[] PROGMEM =
 "\n"
 "  api('/api/settings').then(s => {\n"
 "    $('#apSsid').value = s.apSsid; $('#apCh').value = s.apCh; $('#wUser').value = s.webUser; $('#wAuth').checked = s.authEnabled;\n"
-"    $('#apRouter').checked = s.routerMode; $('#gMode').value = s.portalMode; $('#gTitle').value = s.portalTitle;\n"
+"    $('#apRouter').checked = s.routerMode; $('#gMode').value = s.portalMode; $('#gTitle').value = s.portalTitle; $('#gSsid').value = s.guestSsid;\n"
 "    $('#gTicketBox').style.display = s.portalMode == 2 ? '' : 'none';\n"
+"    $('#gRadioHint').style.display = s.portalMode != 0 ? '' : 'none';\n"
 "    paintSta(s.sta);\n"
 "  }).catch(() => {});\n"
 "  let staNets = [];\n"
@@ -3764,8 +3811,15 @@ const char INDEX_HTML[] PROGMEM =
 "    const r = await act('/api/ap/save', {ssid: $('#apSsid').value, pass: $('#apPass').value, ch: $('#apCh').value, router: $('#apRouter').checked ? '1' : '0'});\n"
 "    if (r) { $('#apPass').value = ''; toast('Gespeichert. WLAN startet neu - bitte neu verbinden.', 'ok'); }\n"
 "  };\n"
-"  $('#gMode').addEventListener('change', () => { $('#gTicketBox').style.display = $('#gMode').value == 2 ? '' : 'none'; });\n"
-"  $('#gSave').onclick = async () => { await act('/api/portal/save', {mode: $('#gMode').value, title: $('#gTitle').value}); };\n"
+"  $('#gMode').addEventListener('change', () => {\n"
+"    $('#gTicketBox').style.display = $('#gMode').value == 2 ? '' : 'none';\n"
+"    $('#gRadioHint').style.display = $('#gMode').value != 0 ? '' : 'none';\n"
+"  });\n"
+"  $('#gSave').onclick = async () => {\n"
+"    if ($('#gMode').value != 0 && !confirm('Speichern? Der ESP32 sendet danach das Gäste-WLAN statt des Steuerungs-WLANs - du musst dich neu verbinden.')) return;\n"
+"    const r = await act('/api/portal/save', {mode: $('#gMode').value, title: $('#gTitle').value, gSsid: $('#gSsid').value, gPass: $('#gPass').value});\n"
+"    if (r) $('#gPass').value = '';\n"
+"  };\n"
 "  $('#wSave').onclick = async () => {\n"
 "    const r = await act('/api/settings/web', {user: $('#wUser').value, oldpass: $('#wOld').value, newpass: $('#wNew').value, auth: $('#wAuth').checked ? '1' : '0'});\n"
 "    if (r) { $('#wOld').value = ''; $('#wNew').value = ''; refreshStatus().catch(() => {}); }\n"
