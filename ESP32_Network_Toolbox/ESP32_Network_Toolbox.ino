@@ -70,24 +70,13 @@
 #define FIRMWARE_ASSET_PREFIX "ESP32_Network_Toolbox"
 #define REQUIRE_SHA256        1   // 1 = ohne SHA-256-Pruefsumme wird NICHT installiert
 
-// --- Router-Modus & Gaeste-Portal --------------------------------------------
-// Router-Modus: der ESP32 verbindet sich mit einem WLAN (z.B. Schul-WLAN, unter
+// --- Router-Modus -------------------------------------------------------------
+// Der ESP32 verbindet sich mit einem WLAN (z.B. Schul-WLAN, unter
 // "Einstellungen -> Internet" eingetragen) und teilt dessen Internetzugang ueber
-// seinen EIGENEN Access Point - wie ein Reise-Router. Am Schul-WLAN meldet sich
-// dabei nur der ESP32 an (eine Geraete-MAC-Adresse).
-// Gaeste-Portal: eine eigene, oeffentliche Anmeldeseite (kein Nachbau eines
-// echten Anbieters), ueber die sich Geraete am eigenen Access Point erst
-// anmelden (Klick oder Ticket-PIN) muessen, bevor sie Internetzugang bekommen.
-#define GUEST_SESSION_HOURS   8    // wie lange ein Gast nach der Anmeldung online bleibt
-#define MAX_TICKETS           40
-#define MAX_GUESTS             16
-#define DEFAULT_PORTAL_TITLE  "Willkommen im WLAN"
-// Eigenes WLAN fuer das Gaeste-Portal (separat vom Steuerungs-WLAN oben).
-// Der ESP32 hat nur EIN Funkmodul: Solange das Gaeste-Portal eingeschaltet ist,
-// sendet er dieses Gaeste-WLAN statt des normalen Access Points - die
-// Verwaltungsoberflaeche bleibt darin unter /admin erreichbar.
-#define DEFAULT_GUEST_SSID    "ESP32-Gaeste-WLAN"
-#define DEFAULT_GUEST_PASS    "gastzugang"        // mind. 8 Zeichen
+// seinen EIGENEN Access Point - wie ein Reise-Router. Am fremden WLAN meldet
+// sich dabei nur der ESP32 an (eine Geraete-MAC-Adresse). Jedes Geraet, das sich
+// mit dem normalen ESP32-Access-Point verbindet, bekommt dann ebenfalls Internet -
+// es gibt dafuer kein separates "Gaeste-WLAN" und keinen eigenen Login.
 
 // ============================================================================
 //  2) BIBLIOTHEKEN (alle im ESP32-Board-Paket enthalten)
@@ -161,10 +150,6 @@ struct Config {
   char staSsid[33];
   char staPass[65];
   bool routerMode;     // Internet vom Heim-WLAN ueber den eigenen AP teilen (NAT)
-  uint8_t portalMode;  // 0 = aus (heutiges Verhalten), 1 = Einfach, 2 = Ticket-System
-  char portalTitle[65];
-  char guestSsid[33];  // eigenes WLAN fuer das Gaeste-Portal (separat vom Access Point oben)
-  char guestPass[65];
 };
 
 struct LogEntry {
@@ -231,28 +216,8 @@ struct Release {
   char sha[65];
 };
 
-struct Ticket {
-  char pin[9];       // 6-stellige PIN als Text
-  bool used;
-  char note[33];     // z.B. "Schueler 3" (optional)
-  uint32_t createdAt;
-  uint32_t usedAt;
-};
-
-struct GuestAuth {
-  uint32_t ip;        // IPAddress als uint32_t, 0 = frei
-  uint32_t expiresAt; // uptimeSec()-Zeitstempel
-  char via[9];        // "einfach" oder die eingeloeste PIN, fuer die Anzeige
-};
-
 enum UpdPhase { UPD_IDLE = 0, UPD_CHECKING, UPD_DOWNLOADING, UPD_INSTALLING, UPD_DONE, UPD_ERROR };
 enum StaState { STA_IDLE = 0, STA_CONNECTING, STA_CONNECTED, STA_FAILED };
-
-// Vorwaertsdeklaration der Gaeste-Portal-Seite (eigenes, generisches Design -
-// KEIN Nachbau eines echten Anbieters; steht ganz unten in dieser Datei)
-extern const char PORTAL_HTML[] PROGMEM;
-static const char *activeApSsid();
-static const char *activeApPass();
 
 static Config g_cfg;
 static WebServer g_server(80);
@@ -306,13 +271,8 @@ static uint32_t g_staRetryAt = 0;
 static bool g_staWanted = false;
 static bool g_needNtp = false;
 
-// Router-Modus (Internet vom Heim-WLAN ueber den eigenen AP teilen) und
-// Gaeste-Portal (Anmeldeseite mit Presets "Einfach" und "Ticket-System")
+// Router-Modus (Internet vom Heim-WLAN ueber den eigenen AP teilen)
 static bool g_routerActive = false;     // NAPT ist aktuell tatsaechlich aktiviert
-static Ticket g_tickets[MAX_TICKETS];
-static uint8_t g_ticketN = 0;
-static GuestAuth g_guests[MAX_GUESTS];
-static portMUX_TYPE g_guestMux = portMUX_INITIALIZER_UNLOCKED;
 static TaskHandle_t g_dnsTaskHandle = NULL;
 
 // BLE
@@ -627,45 +587,6 @@ static void loadBlocked() {
   }
 }
 
-static void saveTickets() {
-  String s;
-  for (int i = 0; i < g_ticketN; i++) {
-    if (i) s += ';';
-    s += g_tickets[i].pin;
-    s += '|';
-    s += g_tickets[i].used ? '1' : '0';
-    s += '|';
-    s += g_tickets[i].note;
-    s += '|';
-    s += String(g_tickets[i].createdAt);
-    s += '|';
-    s += String(g_tickets[i].usedAt);
-  }
-  g_prefs.putString("tickets", s);
-}
-
-static void loadTickets() {
-  g_ticketN = 0;
-  String s = g_prefs.getString("tickets", "");
-  int start = 0;
-  while (start < (int)s.length() && g_ticketN < MAX_TICKETS) {
-    int end = s.indexOf(';', start);
-    if (end < 0) end = s.length();
-    String one = s.substring(start, end);
-    int p1 = one.indexOf('|'), p2 = one.indexOf('|', p1 + 1), p3 = one.indexOf('|', p2 + 1), p4 = one.indexOf('|', p3 + 1);
-    if (p1 > 0 && p2 > p1 && p3 > p2 && p4 > p3) {
-      Ticket &t = g_tickets[g_ticketN];
-      strlcpy(t.pin, one.substring(0, p1).c_str(), sizeof(t.pin));
-      t.used = one.substring(p1 + 1, p2) == "1";
-      strlcpy(t.note, one.substring(p2 + 1, p3).c_str(), sizeof(t.note));
-      t.createdAt = (uint32_t)one.substring(p3 + 1, p4).toInt();
-      t.usedAt = (uint32_t)one.substring(p4 + 1).toInt();
-      g_ticketN++;
-    }
-    start = end + 1;
-  }
-}
-
 static void loadConfig() {
   g_prefs.begin("toolbox", false);
   String s;
@@ -705,21 +626,8 @@ static void loadConfig() {
   }
 
   g_cfg.routerMode = g_prefs.getBool("router", false);
-  g_cfg.portalMode = g_prefs.getUChar("portal_m", 0);
-  if (g_cfg.portalMode > 2) g_cfg.portalMode = 0;
-  s = g_prefs.getString("portal_t", DEFAULT_PORTAL_TITLE);
-  if (s.length() < 1 || s.length() > 64) s = DEFAULT_PORTAL_TITLE;
-  strlcpy(g_cfg.portalTitle, s.c_str(), sizeof(g_cfg.portalTitle));
-
-  s = g_prefs.getString("guest_ssid", DEFAULT_GUEST_SSID);
-  if (s.length() < 1 || s.length() > 32) s = DEFAULT_GUEST_SSID;
-  strlcpy(g_cfg.guestSsid, s.c_str(), sizeof(g_cfg.guestSsid));
-  s = g_prefs.getString("guest_pass", DEFAULT_GUEST_PASS);
-  if (s.length() < 8 || s.length() > 63) s = DEFAULT_GUEST_PASS;
-  strlcpy(g_cfg.guestPass, s.c_str(), sizeof(g_cfg.guestPass));
 
   loadBlocked();
-  loadTickets();
 }
 
 // ============================================================================
@@ -935,7 +843,7 @@ static void testStop() {
   if (!g_testActive) return;
   g_testActive = false;
   addLog(0, "Test-WLANs gestoppt");
-  if (g_apWanted) applyAp(activeApSsid(), activeApPass(), g_cfg.apCh);
+  if (g_apWanted) applyAp(g_cfg.apSsid, g_cfg.apPass, g_cfg.apCh);
 }
 
 static void tickTest() {
@@ -949,19 +857,15 @@ static void tickTest() {
 }
 
 // ============================================================================
-//  8b) ROUTER-MODUS (Internet teilen) UND GAESTE-PORTAL
+//  8b) ROUTER-MODUS (Internet teilen)
 // ============================================================================
-//  Router-Modus: NAT/IP-Weiterleitung zwischen dem Heim-WLAN (Station) und dem
-//  eigenen Access Point - moeglich, weil das ESP32-Boardpaket lwIP bereits mit
+//  NAT/IP-Weiterleitung zwischen dem Heim-WLAN (Station) und dem eigenen
+//  Access Point - moeglich, weil das ESP32-Boardpaket lwIP bereits mit
 //  aktivierter NAPT-Unterstuetzung mitbringt (kein Custom-Build noetig).
-//  Gaeste-Portal: eigener, kleiner DNS-Server (ersetzt DNSServer.h) unterscheidet
-//  pro Geraet (IP-Adresse), ob es schon angemeldet ist:
-//    - nicht angemeldet -> jede Anfrage zeigt zur Anmeldeseite (wie ein
-//      klassisches Captive Portal)
-//    - angemeldet + Router-Modus aktiv -> die DNS-Anfrage wird an den echten
-//      DNS-Server des Heim-WLANs weitergereicht, das Geraet bekommt Internet
-//  Ohne Router-Modus bleibt alles beim heutigen Verhalten (immer zur eigenen
-//  Oberflaeche umleiten) - null Aenderung fuer den reinen Diagnose-Betrieb.
+//  Ist Router-Modus aktiv, bekommt jedes Geraet am normalen Access Point
+//  sofort echtes Internet (kein Login, kein separates Gaeste-WLAN). Ohne
+//  Router-Modus bleibt alles beim heutigen Verhalten (eigener DNS-Server
+//  zeigt immer zur eigenen Oberflaeche, klassisches Captive Portal).
 
 static bool routableNow() {
   return g_cfg.routerMode && g_staState == STA_CONNECTED;
@@ -998,129 +902,15 @@ static void tickRouter() {
   if (want != g_routerActive) applyRouterMode(want);
 }
 
-// ---- Gaeste am eigenen Access Point: Anmeldestatus -------------------------
-
-static bool isGuestAuthorized(uint32_t ip) {
-  if (!ip) return false;
-  uint32_t now = uptimeSec();
-  bool ok = false;
-  portENTER_CRITICAL(&g_guestMux);
-  for (int i = 0; i < MAX_GUESTS; i++) {
-    if (g_guests[i].ip == ip) {
-      if ((int32_t)(now - g_guests[i].expiresAt) >= 0) {
-        g_guests[i].ip = 0;  // abgelaufen
-      } else {
-        ok = true;
-      }
-      break;
-    }
-  }
-  portEXIT_CRITICAL(&g_guestMux);
-  return ok;
-}
-
-static void addGuestAuth(uint32_t ip, const char *via) {
-  uint32_t now = uptimeSec();
-  portENTER_CRITICAL(&g_guestMux);
-  int slot = -1, oldest = -1;
-  uint32_t oldestExp = 0xFFFFFFFF;
-  for (int i = 0; i < MAX_GUESTS; i++) {
-    if (g_guests[i].ip == ip || g_guests[i].ip == 0) { slot = i; break; }
-    if (g_guests[i].expiresAt < oldestExp) { oldestExp = g_guests[i].expiresAt; oldest = i; }
-  }
-  if (slot < 0) slot = oldest >= 0 ? oldest : 0;
-  g_guests[slot].ip = ip;
-  g_guests[slot].expiresAt = now + (uint32_t)GUEST_SESSION_HOURS * 3600UL;
-  strlcpy(g_guests[slot].via, via, sizeof(g_guests[slot].via));
-  portEXIT_CRITICAL(&g_guestMux);
-}
-
-static void revokeGuestAuth(uint32_t ip) {
-  portENTER_CRITICAL(&g_guestMux);
-  for (int i = 0; i < MAX_GUESTS; i++)
-    if (g_guests[i].ip == ip) g_guests[i].ip = 0;
-  portEXIT_CRITICAL(&g_guestMux);
-}
-
-// ---- Ticket-System (Presets: Einfach braucht keine Tickets) ----------------
-// saveTickets()/loadTickets() stehen weiter oben bei den uebrigen
-// Preferences-Funktionen (Abschnitt 6).
-
-static bool ticketPinExists(const char *pin) {
-  for (int i = 0; i < g_ticketN; i++)
-    if (strcmp(g_tickets[i].pin, pin) == 0) return true;
-  return false;
-}
-
-// Erzeugt eine neue, eindeutige 6-stellige PIN. Gibt NULL zurueck, wenn die
-// Ticketliste voll ist.
-static Ticket *ticketCreate(const char *note) {
-  if (g_ticketN >= MAX_TICKETS) return NULL;
-  Ticket &t = g_tickets[g_ticketN];
-  memset(&t, 0, sizeof(t));
-  char pin[9];
-  do {
-    snprintf(pin, sizeof(pin), "%06u", (unsigned)(esp_random() % 1000000UL));
-  } while (ticketPinExists(pin));
-  strlcpy(t.pin, pin, sizeof(t.pin));
-  strlcpy(t.note, note ? note : "", sizeof(t.note));
-  t.createdAt = uptimeSec();
-  g_ticketN++;
-  saveTickets();
-  return &t;
-}
-
-static bool ticketDelete(const char *pin) {
-  for (int i = 0; i < g_ticketN; i++) {
-    if (strcmp(g_tickets[i].pin, pin) == 0) {
-      for (int j = i; j < g_ticketN - 1; j++) g_tickets[j] = g_tickets[j + 1];
-      g_ticketN--;
-      saveTickets();
-      return true;
-    }
-  }
-  return false;
-}
-
-// 0 = ok+angemeldet, 1 = unbekannte PIN, 2 = PIN schon benutzt
-static int ticketRedeem(const char *pin, uint32_t guestIp) {
-  for (int i = 0; i < g_ticketN; i++) {
-    if (strcmp(g_tickets[i].pin, pin) == 0) {
-      if (g_tickets[i].used) return 2;
-      g_tickets[i].used = true;
-      g_tickets[i].usedAt = uptimeSec();
-      saveTickets();
-      addGuestAuth(guestIp, pin);
-      return 0;
-    }
-  }
-  return 1;
-}
-
-static void savePortalCfg() {
+static void saveRouterCfg() {
   g_prefs.putBool("router", g_cfg.routerMode);
-  g_prefs.putUChar("portal_m", g_cfg.portalMode);
-  g_prefs.putString("portal_t", g_cfg.portalTitle);
-  g_prefs.putString("guest_ssid", g_cfg.guestSsid);
-  g_prefs.putString("guest_pass", g_cfg.guestPass);
-}
-
-// Welches WLAN der Access Point gerade senden soll: Solange das Gaeste-Portal
-// eingeschaltet ist, das eigene Gaeste-WLAN - sonst das normale Steuerungs-WLAN.
-// (Der ESP32 hat nur ein Funkmodul und kann nicht beide gleichzeitig senden.)
-static const char *activeApSsid() {
-  return g_cfg.portalMode ? g_cfg.guestSsid : g_cfg.apSsid;
-}
-static const char *activeApPass() {
-  return g_cfg.portalMode ? g_cfg.guestPass : g_cfg.apPass;
 }
 
 // ---- Eigener, kleiner DNS-Server (loest DNSServer.h ab) --------------------
-//  Antwortet nicht angemeldeten Gaesten (und, wenn kein Router-Modus laeuft,
-//  grundsaetzlich jedem) mit der eigenen IP-Adresse (klassisches Captive
-//  Portal). Angemeldete Gaeste bekommen bei aktivem Router-Modus ihre Anfrage
-//  an den echten DNS-Server des Heim-WLANs weitergereicht, damit echte
-//  Internetseiten aufloesen.
+//  Ohne Router-Modus (oder solange das Heim-WLAN nicht verbunden ist):
+//  jede Anfrage zeigt zur eigenen Oberflaeche (klassisches Captive Portal).
+//  Mit aktivem Router-Modus: die DNS-Anfrage wird an den echten DNS-Server
+//  des Heim-WLANs weitergereicht, das Geraet bekommt echtes Internet.
 
 static void dnsSendA(WiFiUDP &udp, const uint8_t *req, int len, IPAddress answer, IPAddress dst, uint16_t dstPort) {
   if (len < 17 || len > 480) return;
@@ -1194,8 +984,7 @@ static void dnsTask(void *arg) {
       IPAddress src = udp.remoteIP();
       uint16_t sport = udp.remotePort();
       if (n > 0) {
-        bool gated = g_cfg.portalMode != 0 && !isGuestAuthorized((uint32_t)src);
-        if (routableNow() && !gated) {
+        if (routableNow()) {
           dnsForward(udp, buf, n, WiFi.dnsIP(), src, sport);
         } else {
           dnsSendA(udp, buf, n, WiFi.softAPIP(), src, sport);
@@ -2230,12 +2019,6 @@ static void handleStatus() {
   jB(o, "scanning", g_scanState == 1 && !g_scanIsTrack);
   jB(o, "routerMode", g_cfg.routerMode);
   jB(o, "routerActive", g_routerActive);
-  jI(o, "portalMode", g_cfg.portalMode);
-  int guestOnline = 0;
-  uint32_t nowS = uptimeSec();
-  for (int i = 0; i < MAX_GUESTS; i++)
-    if (g_guests[i].ip && (int32_t)(nowS - g_guests[i].expiresAt) < 0) guestOnline++;
-  jI(o, "guestsOnline", guestOnline);
   appendSta(o);
   jClose(o, '}');
   o += ',';
@@ -2361,7 +2144,7 @@ static void handleApStart() {
   NEED_AUTH();
   g_apWanted = true;
   if (g_testActive) testStop();
-  else if (!applyAp(activeApSsid(), activeApPass(), g_cfg.apCh)) { sendErr(500, "Access Point konnte nicht gestartet werden"); return; }
+  else if (!applyAp(g_cfg.apSsid, g_cfg.apPass, g_cfg.apCh)) { sendErr(500, "Access Point konnte nicht gestartet werden"); return; }
   addLog(0, "Access Point gestartet");
   sendOk("");
 }
@@ -2390,7 +2173,7 @@ static void handleApSave() {
   saveApCfg();
   if (g_server.hasArg("router")) {
     g_cfg.routerMode = g_server.arg("router") == "1";
-    savePortalCfg();
+    saveRouterCfg();
   }
   addLog(0, "Einstellungen gespeichert (Access Point)");
   g_apWanted = true;
@@ -2585,40 +2368,9 @@ static void handleSettingsGet() {
   jB(o, "hasStaPass", g_cfg.staPass[0] != 0);
   jB(o, "routerMode", g_cfg.routerMode);
   jB(o, "routerActive", g_routerActive);
-  jI(o, "portalMode", g_cfg.portalMode);
-  jS(o, "portalTitle", g_cfg.portalTitle);
-  jS(o, "guestSsid", g_cfg.guestSsid);
-  jB(o, "activeIsGuest", g_cfg.portalMode != 0);
   appendSta(o);
   jClose(o, '}');
   sendJson(200, o);
-}
-
-static void handlePortalSave() {
-  NEED_AUTH();
-  int mode = g_server.arg("mode").toInt();
-  String title = g_server.arg("title");
-  String gSsid = g_server.arg("gSsid");
-  String gPass = g_server.arg("gPass");
-  title.trim();
-  gSsid.trim();
-  if (mode < 0 || mode > 2) { sendErr(400, "Ungültiger Modus"); return; }
-  if (title.length() < 1 || title.length() > 64) { sendErr(400, "Titel muss 1 bis 64 Zeichen lang sein"); return; }
-  if (gSsid.length() < 1 || gSsid.length() > 32) { sendErr(400, "Gäste-WLAN-Name muss 1 bis 32 Zeichen lang sein"); return; }
-  if (gPass.length() && (gPass.length() < 8 || gPass.length() > 63)) { sendErr(400, "Gäste-WLAN-Passwort muss 8 bis 63 Zeichen lang sein"); return; }
-  bool modeChanged = ((uint8_t)mode != g_cfg.portalMode) || (gSsid != g_cfg.guestSsid);
-  g_cfg.portalMode = (uint8_t)mode;
-  strlcpy(g_cfg.portalTitle, title.c_str(), sizeof(g_cfg.portalTitle));
-  strlcpy(g_cfg.guestSsid, gSsid.c_str(), sizeof(g_cfg.guestSsid));
-  if (gPass.length()) strlcpy(g_cfg.guestPass, gPass.c_str(), sizeof(g_cfg.guestPass));
-  savePortalCfg();
-  addLog(0, "Einstellungen gespeichert (Gäste-Portal: %s)", mode == 0 ? "aus" : (mode == 2 ? "Ticket-System" : "Einfach"));
-  String msg = "Gespeichert.";
-  if (modeChanged && g_apWanted && !g_testActive) {
-    g_apRestartAt = millis() + 800UL;  // Funknetz wechselt (Gaeste-WLAN <-> Steuerungs-WLAN)
-    msg = "Gespeichert. Das gesendete WLAN wechselt jetzt - bitte neu verbinden.";
-  }
-  sendOk(msg.c_str());
 }
 
 static void handleSettingsWeb() {
@@ -2800,137 +2552,6 @@ static void handleUploadData() {
   }
 }
 
-// ---- Gaeste-Portal (öffentlich, kein Admin-Login nötig) --------------------
-//  Eigenes, generisches Design - siehe Hinweis am Anfang der Datei: es wird
-//  bewusst KEIN echter Anbieter (z.B. Bayern-WLAN o.ä.) nachgebaut, das wäre
-//  eine Phishing-Falle für alle, die sich verbinden.
-
-static uint32_t requesterIp() {
-  return (uint32_t)g_server.client().remoteIP();
-}
-
-static void handleGuestInfo() {
-  String o = "{";
-  jI(o, "mode", g_cfg.portalMode);
-  jS(o, "title", g_cfg.portalTitle);
-  jB(o, "online", isGuestAuthorized(requesterIp()));
-  jB(o, "internet", routableNow());
-  jClose(o, '}');
-  sendJson(200, o);
-}
-
-static void handleGuestAccept() {
-  if (g_cfg.portalMode != 1) { sendErr(400, "Dieses Preset ist nicht aktiv"); return; }
-  addGuestAuth(requesterIp(), "einfach");
-  addLog(0, "Gast angemeldet (Einfach): %s", IPAddress(requesterIp()).toString().c_str());
-  sendOk("Angemeldet.");
-}
-
-static void handleGuestRedeem() {
-  if (g_cfg.portalMode != 2) { sendErr(400, "Dieses Preset ist nicht aktiv"); return; }
-  String pin = g_server.arg("pin");
-  pin.trim();
-  if (pin.length() != 6) { sendErr(400, "Bitte eine 6-stellige PIN eingeben"); return; }
-  int r = ticketRedeem(pin.c_str(), requesterIp());
-  if (r == 1) { sendErr(404, "Unbekannte PIN"); return; }
-  if (r == 2) { sendErr(409, "Diese PIN wurde bereits verwendet"); return; }
-  addLog(0, "Ticket eingelöst: %s", pin.c_str());
-  sendOk("Angemeldet.");
-}
-
-static void handleGuestLogout() {
-  revokeGuestAuth(requesterIp());
-  sendOk("");
-}
-
-// ---- Ticket-Verwaltung und Gaesteliste (Admin) ------------------------------
-
-static void handleTicketsGet() {
-  NEED_AUTH();
-  String o;
-  o.reserve(200 + g_ticketN * 100);
-  o = "{\"tickets\":[";
-  for (int i = 0; i < g_ticketN; i++) {
-    const Ticket &t = g_tickets[i];
-    o += '{';
-    jS(o, "pin", t.pin);
-    jB(o, "used", t.used);
-    jS(o, "note", t.note);
-    jI(o, "createdAt", t.createdAt);
-    jI(o, "usedAt", t.usedAt);
-    jClose(o, '}');
-    o += ',';
-  }
-  jClose(o, ']');
-  o += ',';
-  jI(o, "max", MAX_TICKETS);
-  jClose(o, '}');
-  sendJson(200, o);
-}
-
-static void handleTicketCreate() {
-  NEED_AUTH();
-  String note = g_server.arg("note");
-  note.trim();
-  note.replace(";", ""); note.replace("|", ""); note.replace("\n", "");
-  Ticket *t = ticketCreate(note.c_str());
-  if (!t) { sendErr(400, "Maximale Anzahl an Tickets erreicht"); return; }
-  addLog(0, "Ticket erstellt: %s", t->pin);
-  String o = "{\"ok\":true,";
-  jS(o, "pin", t->pin);
-  jClose(o, '}');
-  sendJson(200, o);
-}
-
-static void handleTicketDelete() {
-  NEED_AUTH();
-  String pin = g_server.arg("pin");
-  if (!ticketDelete(pin.c_str())) { sendErr(404, "Ticket nicht gefunden"); return; }
-  addLog(0, "Ticket gelöscht: %s", pin.c_str());
-  sendOk("");
-}
-
-static void handleTicketsDownload() {
-  NEED_AUTH();
-  String o = "ESP32 Network Toolbox - WLAN-Tickets (" FIRMWARE_NAME ")\n";
-  o += "WLAN: " + String(g_cfg.apSsid) + "\n\n";
-  for (int i = 0; i < g_ticketN; i++) {
-    o += "PIN: " + String(g_tickets[i].pin);
-    o += g_tickets[i].used ? "  (bereits verwendet)" : "  (frei)";
-    if (g_tickets[i].note[0]) o += "  - " + String(g_tickets[i].note);
-    o += "\n";
-  }
-  g_server.sendHeader("Content-Disposition", "attachment; filename=wlan-tickets.txt");
-  g_server.send(200, "text/plain; charset=utf-8", o);
-}
-
-static void handleGuestsGet() {
-  NEED_AUTH();
-  String o = "{\"guests\":[";
-  uint32_t nowS = uptimeSec();
-  for (int i = 0; i < MAX_GUESTS; i++) {
-    if (!g_guests[i].ip || (int32_t)(nowS - g_guests[i].expiresAt) >= 0) continue;
-    o += '{';
-    jS(o, "ip", IPAddress(g_guests[i].ip).toString().c_str());
-    jS(o, "via", g_guests[i].via);
-    jI(o, "remain", (long)(g_guests[i].expiresAt - nowS));
-    jClose(o, '}');
-    o += ',';
-  }
-  jClose(o, ']');
-  jClose(o, '}');
-  sendJson(200, o);
-}
-
-static void handleGuestRevoke() {
-  NEED_AUTH();
-  IPAddress ip;
-  if (!ip.fromString(g_server.arg("ip"))) { sendErr(400, "Ungültige IP-Adresse"); return; }
-  revokeGuestAuth((uint32_t)ip);
-  addLog(0, "Gast getrennt: %s", ip.toString().c_str());
-  sendOk("");
-}
-
 // ---- Captive Portal ----
 
 static void redirectToRoot() {
@@ -2940,13 +2561,6 @@ static void redirectToRoot() {
 }
 
 static void handleRoot() {
-  g_server.sendHeader("Cache-Control", "no-cache");
-  if (g_cfg.portalMode != 0) g_server.send_P(200, "text/html; charset=utf-8", PORTAL_HTML);
-  else g_server.send_P(200, "text/html; charset=utf-8", INDEX_HTML);
-}
-
-// Admin-Oberfläche ist hier immer erreichbar, auch wenn "/" das Gäste-Portal zeigt.
-static void handleAdmin() {
   g_server.sendHeader("Cache-Control", "no-cache");
   g_server.send_P(200, "text/html; charset=utf-8", INDEX_HTML);
 }
@@ -2968,7 +2582,6 @@ static void setupRoutes() {
 
   g_server.on("/", HTTP_GET, handleRoot);
   g_server.on("/index.html", HTTP_GET, handleRoot);
-  g_server.on("/admin", HTTP_GET, handleAdmin);
   g_server.on("/favicon.ico", HTTP_GET, []() { g_server.send(204, "text/plain", ""); });
 
   // Captive-Portal-Erkennung von Android, iOS, Windows, Firefox
@@ -3007,17 +2620,6 @@ static void setupRoutes() {
 
   g_server.on("/api/settings", HTTP_GET, handleSettingsGet);
   g_server.on("/api/settings/web", HTTP_POST, handleSettingsWeb);
-  g_server.on("/api/portal/save", HTTP_POST, handlePortalSave);
-  g_server.on("/api/tickets", HTTP_GET, handleTicketsGet);
-  g_server.on("/api/tickets/create", HTTP_POST, handleTicketCreate);
-  g_server.on("/api/tickets/delete", HTTP_POST, handleTicketDelete);
-  g_server.on("/api/tickets/download", HTTP_GET, handleTicketsDownload);
-  g_server.on("/api/guests", HTTP_GET, handleGuestsGet);
-  g_server.on("/api/guests/revoke", HTTP_POST, handleGuestRevoke);
-  g_server.on("/api/guest/info", HTTP_GET, handleGuestInfo);
-  g_server.on("/api/guest/accept", HTTP_POST, handleGuestAccept);
-  g_server.on("/api/guest/redeem", HTTP_POST, handleGuestRedeem);
-  g_server.on("/api/guest/logout", HTTP_POST, handleGuestLogout);
   g_server.on("/api/sta/connect", HTTP_POST, handleStaConnect);
   g_server.on("/api/sta/disconnect", HTTP_POST, handleStaDisconnect);
   g_server.on("/api/notice/dismiss", HTTP_POST, handleNoticeDismiss);
@@ -3063,8 +2665,8 @@ void setup() {
     staConnect();
   } else {
     WiFi.mode(WIFI_AP_STA);
-    if (applyAp(activeApSsid(), activeApPass(), g_cfg.apCh)) {
-      addLog(0, "Access Point gestartet: %s", activeApSsid());
+    if (applyAp(g_cfg.apSsid, g_cfg.apPass, g_cfg.apCh)) {
+      addLog(0, "Access Point gestartet: %s", g_cfg.apSsid);
     } else {
       addLog(2, "Access Point konnte nicht gestartet werden");
     }
@@ -3080,7 +2682,6 @@ void setup() {
   if (DEMO_MODE) addLog(1, "DEMO-MODUS aktiv: WLAN/BLE/Update-Daten sind simuliert");
   if (strcmp(g_cfg.apPass, DEFAULT_AP_PASS) == 0) addLog(1, "Standard-WLAN-Passwort in Benutzung - bitte ändern");
   if (g_cfg.routerMode) addLog(0, "Router-Modus eingeschaltet - wird aktiv, sobald das Heim-WLAN verbunden ist");
-  if (g_cfg.portalMode) addLog(0, "Gäste-Portal aktiv (%s)", g_cfg.portalMode == 2 ? "Ticket-System" : "Einfach");
 }
 
 void loop() {
@@ -3099,7 +2700,7 @@ void loop() {
   if (g_apRestartAt && (int32_t)(millis() - g_apRestartAt) >= 0) {
     g_apRestartAt = 0;
     if (g_apWanted) {
-      if (applyAp(activeApSsid(), activeApPass(), g_cfg.apCh)) addLog(0, "Access Point gestartet: %s", activeApSsid());
+      if (applyAp(g_cfg.apSsid, g_cfg.apPass, g_cfg.apCh)) addLog(0, "Access Point gestartet: %s", g_cfg.apSsid);
     } else {
       stopAp();
       addLog(0, "Access Point gestoppt");
@@ -3467,7 +3068,6 @@ const char INDEX_HTML[] PROGMEM =
 "    statCard('wifi', 'Gefundene WLANs', w.found, w.scanning ? 'Scan läuft...' : 'aus letztem Scan') +\n"
 "    statCard('globe', 'Internet', w.sta.state === 'connected' ? 'Online' : 'Offline', internet) +\n"
 "    (w.routerMode ? statCard('out', 'Router-Modus', w.routerActive ? '<span class=\"dot\"></span>Aktiv' : '<span class=\"dot off\"></span>Wartet', w.routerActive ? 'Internet wird geteilt' : 'braucht verbundenes Heim-WLAN') : '') +\n"
-"    (w.portalMode ? statCard('users', 'Gäste-Portal', w.guestsOnline, (w.portalMode == 2 ? 'Ticket-System' : 'Einfach') + ' · online') : '') +\n"
 "    '</div>' +\n"
 "    '<div class=\"card\"><div class=\"sec\">' + ic('cpu') + '<h2>Systeminformationen</h2></div><div class=\"kv\">' +\n"
 "    '<div>Chip-Modell</div><div>' + esc(s.chip.model) + ' (Revision ' + esc(s.chip.rev) + ')</div>' +\n"
@@ -3733,7 +3333,7 @@ const char INDEX_HTML[] PROGMEM =
 "let UP = null;\n"
 "VIEWS.settings = el => {\n"
 "  el.innerHTML =\n"
-"    '<div class=\"sub-nav\"><a data-s=\"s-ap\">Access Point</a><a data-s=\"s-web\">Webinterface</a><a data-s=\"s-sta\">Internet (Heim-WLAN)</a><a data-s=\"s-guest\">Gäste-Portal</a><a data-s=\"s-sys\">System</a><a data-s=\"s-upd\">Firmware-Update</a></div>' +\n"
+"    '<div class=\"sub-nav\"><a data-s=\"s-ap\">Access Point</a><a data-s=\"s-web\">Webinterface</a><a data-s=\"s-sta\">Internet (Heim-WLAN)</a><a data-s=\"s-sys\">System</a><a data-s=\"s-upd\">Firmware-Update</a></div>' +\n"
 "    '<div class=\"card\" id=\"s-ap\"><div class=\"sec\">' + ic('radio') + '<h2>Access Point</h2></div>' +\n"
 "    '<label>Name des WLANs (SSID)</label><input id=\"apSsid\" maxlength=\"32\" style=\"width:100%;max-width:380px\"><label>Passwort (8-63 Zeichen, leer = unverändert)</label><input id=\"apPass\" type=\"password\" autocomplete=\"new-password\" maxlength=\"63\" placeholder=\"unverändert\" style=\"width:100%;max-width:380px\"><label>Kanal</label><select id=\"apCh\">' + Array.from({length: 11}, (_, i) => '<option>' + (i + 1) + '</option>').join('') + '</select>' +\n"
 "    '<label style=\"display:flex;gap:10px;align-items:center;color:var(--tx);font-size:15px;margin-top:16px\"><input type=\"checkbox\" id=\"apRouter\"> Internet über eigenes WLAN teilen (Router-Modus)</label>' +\n"
@@ -3754,26 +3354,13 @@ const char INDEX_HTML[] PROGMEM =
 "    '<label>WLAN-Name (SSID)</label><input id=\"sSsidManual\" maxlength=\"32\" style=\"width:100%;max-width:380px\"><label>Passwort</label><input id=\"sPassManual\" type=\"password\" autocomplete=\"new-password\" maxlength=\"63\" style=\"width:100%;max-width:380px\">' +\n"
 "    '<div class=\"bar\" style=\"margin-top:14px\"><button class=\"btn\" id=\"sGoManual\">Verbinden</button></div></details>' +\n"
 "    '<div class=\"bar\" style=\"margin-top:14px\"><button class=\"btn dng\" id=\"sOff\">Trennen &amp; vergessen</button></div></div>' +\n"
-"    '<div class=\"card\" id=\"s-guest\"><div class=\"sec\">' + ic('users') + '<h2>Gäste-Portal</h2></div>' +\n"
-"    '<div class=\"hint\" style=\"margin:0 0 14px\">Geräte an deinem Access Point sehen erst eine eigene Anmeldeseite, bevor sie Internet bekommen (braucht aktiven Router-Modus oben). Kein Nachbau eines echten Anbieters - eine eigene, klar erkennbare Seite.</div>' +\n"
-"    '<label>Modus</label><select id=\"gMode\"><option value=\"0\">Aus (heutiges Verhalten: direkt zur eigenen Oberfläche)</option><option value=\"1\">Einfach (ein „Verbinden“-Knopf)</option><option value=\"2\">Ticket-System (6-stelliger Anmeldecode, einmal gültig)</option></select>' +\n"
-"    '<div class=\"banner info\" id=\"gRadioHint\" style=\"display:none;margin:14px 0 0\">' + ic('wifi') + '<span>Dein ESP32 hat nur ein WLAN-Funkmodul: Sobald das Gäste-Portal eingeschaltet ist, sendet er <b>dieses Gäste-WLAN statt deines Steuerungs-WLANs</b>. Die Verwaltungsoberfläche bleibt darin unter <span class=\"mono\">/admin</span> erreichbar.</span></div>' +\n"
-"    '<label>WLAN-Name für Gäste</label><input id=\"gSsid\" maxlength=\"32\" style=\"width:100%;max-width:380px\"><label>WLAN-Passwort für Gäste (8-63 Zeichen, leer = unverändert)</label><input id=\"gPass\" type=\"password\" autocomplete=\"new-password\" maxlength=\"63\" placeholder=\"unverändert\" style=\"width:100%;max-width:380px\">' +\n"
-"    '<label>Titel auf der Anmeldeseite</label><input id=\"gTitle\" maxlength=\"64\" style=\"width:100%;max-width:380px\">' +\n"
-"    '<div style=\"margin-top:14px\"><button class=\"btn pri\" id=\"gSave\">Speichern</button></div>' +\n"
-"    '<div id=\"gTicketBox\" style=\"display:none;margin-top:20px;padding-top:18px;border-top:1px solid var(--line)\">' +\n"
-"    '<h3>Tickets</h3><div class=\"bar\" style=\"margin-top:8px\"><input id=\"tNote\" placeholder=\"Name/Kommentar (optional)\" style=\"flex:1 1 180px\"><button class=\"btn pri\" id=\"tCreate\">' + ic('flask') + 'Neues Ticket</button><a class=\"btn\" id=\"tDownload\" href=\"#\" target=\"_blank\">' + ic('download') + 'Alle herunterladen</a></div>' +\n"
-"    '<div class=\"scroll\" style=\"margin-top:12px\"><table class=\"tbl\"><thead><tr><th>PIN</th><th>Kommentar</th><th>Status</th><th></th></tr></thead><tbody id=\"tTb\"></tbody></table></div></div>' +\n"
-"    '<div style=\"margin-top:20px;padding-top:18px;border-top:1px solid var(--line)\"><h3>Gerade online</h3><div class=\"scroll\" style=\"margin-top:10px\"><table class=\"tbl\"><thead><tr><th>IP-Adresse</th><th>Angemeldet über</th><th>Verbleibend</th><th></th></tr></thead><tbody id=\"gTb\"></tbody></table></div></div></div>' +\n"
 "    '<div class=\"card\" id=\"s-sys\"><div class=\"sec\">' + ic('cpu') + '<h2>System</h2></div><div class=\"kv\" id=\"sysInfo\"></div><div class=\"bar\" style=\"margin-top:14px\"><button class=\"btn\" id=\"rst\">' + ic('power') + 'Neustart</button><button class=\"btn dng\" id=\"fac\">' + ic('trash') + 'Werkseinstellungen</button></div></div>' +\n"
 "    '<div class=\"card\" id=\"s-upd\"><div class=\"sec\">' + ic('download') + '<h2>Firmware-Update</h2></div><div id=\"updBody\"><div class=\"empty\">Lade...</div></div></div>';\n"
 "  $$('[data-s]', el).forEach(a => a.onclick = () => { const t = $('#' + a.dataset.s); if (t) t.scrollIntoView({behavior: 'smooth', block: 'start'}); });\n"
 "\n"
 "  api('/api/settings').then(s => {\n"
 "    $('#apSsid').value = s.apSsid; $('#apCh').value = s.apCh; $('#wUser').value = s.webUser; $('#wAuth').checked = s.authEnabled;\n"
-"    $('#apRouter').checked = s.routerMode; $('#gMode').value = s.portalMode; $('#gTitle').value = s.portalTitle; $('#gSsid').value = s.guestSsid;\n"
-"    $('#gTicketBox').style.display = s.portalMode == 2 ? '' : 'none';\n"
-"    $('#gRadioHint').style.display = s.portalMode != 0 ? '' : 'none';\n"
+"    $('#apRouter').checked = s.routerMode;\n"
 "    paintSta(s.sta);\n"
 "  }).catch(() => {});\n"
 "  let staNets = [];\n"
@@ -3811,15 +3398,6 @@ const char INDEX_HTML[] PROGMEM =
 "    const r = await act('/api/ap/save', {ssid: $('#apSsid').value, pass: $('#apPass').value, ch: $('#apCh').value, router: $('#apRouter').checked ? '1' : '0'});\n"
 "    if (r) { $('#apPass').value = ''; toast('Gespeichert. WLAN startet neu - bitte neu verbinden.', 'ok'); }\n"
 "  };\n"
-"  $('#gMode').addEventListener('change', () => {\n"
-"    $('#gTicketBox').style.display = $('#gMode').value == 2 ? '' : 'none';\n"
-"    $('#gRadioHint').style.display = $('#gMode').value != 0 ? '' : 'none';\n"
-"  });\n"
-"  $('#gSave').onclick = async () => {\n"
-"    if ($('#gMode').value != 0 && !confirm('Speichern? Der ESP32 sendet danach das Gäste-WLAN statt des Steuerungs-WLANs - du musst dich neu verbinden.')) return;\n"
-"    const r = await act('/api/portal/save', {mode: $('#gMode').value, title: $('#gTitle').value, gSsid: $('#gSsid').value, gPass: $('#gPass').value});\n"
-"    if (r) $('#gPass').value = '';\n"
-"  };\n"
 "  $('#wSave').onclick = async () => {\n"
 "    const r = await act('/api/settings/web', {user: $('#wUser').value, oldpass: $('#wOld').value, newpass: $('#wNew').value, auth: $('#wAuth').checked ? '1' : '0'});\n"
 "    if (r) { $('#wOld').value = ''; $('#wNew').value = ''; refreshStatus().catch(() => {}); }\n"
@@ -3845,37 +3423,8 @@ const char INDEX_HTML[] PROGMEM =
 "    if (await act('/api/system/factory', {confirm: 'RESET'}, false)) { setToken(''); waitForDevice('Werkseinstellungen werden hergestellt...'); }\n"
 "  };\n"
 "  initUpdate();\n"
-"  initGuestPortal(el);\n"
 "  if (pending === 'web' || pending === 'ap') { const t = $(pending === 'web' ? '#s-web' : '#s-ap'); pending = null; setTimeout(() => t && t.scrollIntoView({behavior: 'smooth', block: 'start'}), 200); }\n"
 "};\n"
-"\n"
-"// ---- Ticket-Verwaltung und Gaesteliste (Abschnitt in den Einstellungen) ----\n"
-"function initGuestPortal(el) {\n"
-"  const loadTickets = async () => {\n"
-"    const d = await api('/api/tickets');\n"
-"    $('#tTb').innerHTML = d.tickets.length ? d.tickets.map(t =>\n"
-"      '<tr><td class=\"mono\">' + esc(t.pin) + '</td><td>' + esc(t.note) + '</td><td>' + (t.used ? '<span class=\"tag err\">verwendet</span>' : '<span class=\"tag ok\">frei</span>') + '</td>' +\n"
-"      '<td><button class=\"btn sm dng\" data-p=\"' + esc(t.pin) + '\">' + ic('trash') + '</button></td></tr>').join('')\n"
-"      : '<tr><td colspan=\"4\" class=\"empty\">Noch keine Tickets.</td></tr>';\n"
-"    $$('#tTb [data-p]').forEach(b => b.onclick = async () => { if (!confirm('Ticket ' + b.dataset.p + ' löschen?')) return; await act('/api/tickets/delete', {pin: b.dataset.p}, 'Gelöscht'); loadTickets().catch(() => {}); });\n"
-"    $('#tDownload').href = '/api/tickets/download?t=' + encodeURIComponent(TOKEN);\n"
-"  };\n"
-"  const loadGuests = async () => {\n"
-"    const d = await api('/api/guests');\n"
-"    $('#gTb').innerHTML = d.guests.length ? d.guests.map(g =>\n"
-"      '<tr><td class=\"mono\">' + esc(g.ip) + '</td><td>' + esc(g.via) + '</td><td>' + Math.max(0, Math.round(g.remain / 60)) + ' Min.</td>' +\n"
-"      '<td><button class=\"btn sm dng\" data-ip=\"' + esc(g.ip) + '\">' + ic('out') + 'Trennen</button></td></tr>').join('')\n"
-"      : '<tr><td colspan=\"4\" class=\"empty\">Kein Gast angemeldet.</td></tr>';\n"
-"    $$('#gTb [data-ip]').forEach(b => b.onclick = async () => { await act('/api/guests/revoke', {ip: b.dataset.ip}, 'Getrennt'); loadGuests().catch(() => {}); });\n"
-"  };\n"
-"  $('#tCreate').onclick = async () => {\n"
-"    const r = await act('/api/tickets/create', {note: $('#tNote').value}, false);\n"
-"    if (r) { $('#tNote').value = ''; toast('Neues Ticket: ' + r.pin, 'ok'); loadTickets().catch(() => {}); }\n"
-"  };\n"
-"  loadTickets().catch(() => {});\n"
-"  loadGuests().catch(() => {});\n"
-"  every(loadGuests, 5000);\n"
-"}\n"
 "\n"
 "// ---- Firmware-Update (Abschnitt in den Einstellungen) ----\n"
 "function initUpdate() {\n"
@@ -3979,117 +3528,6 @@ const char INDEX_HTML[] PROGMEM =
 "window.addEventListener('hashchange', () => { const h = (location.hash || '').slice(1); if (h && h !== routeId && PAGES.some(x => x[0] === h)) { routeId = h; route(); } });\n"
 "try { const h0 = (location.hash || '').slice(1); if (PAGES.some(x => x[0] === h0)) routeId = h0; } catch (e) {}\n"
 "boot();\n"
-"</script>\n"
-"</body>\n"
-"</html>\n";
-
-const char PORTAL_HTML[] PROGMEM =
-"<!DOCTYPE html>\n"
-"<html lang=\"de\">\n"
-"<head>\n"
-"<meta charset=\"utf-8\">\n"
-"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n"
-"<meta name=\"theme-color\" content=\"#155ec9\">\n"
-"<title>WLAN-Anmeldung</title>\n"
-"<style>\n"
-":root{--acc:#155ec9;--acc2:#2f7de8;--bg:#eef3fa;--card:#ffffff;--tx:#16233b;--mut:#5c6b85;--line:#dde6f3;--ok:#1f9d55;--err:#d1352c}\n"
-"*{box-sizing:border-box}\n"
-"html,body{margin:0;min-height:100vh;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif}\n"
-"body{display:flex;align-items:center;justify-content:center;padding:22px 16px}\n"
-".wrap{width:100%;max-width:420px}\n"
-".card{background:var(--card);border-radius:20px;padding:30px 26px;box-shadow:0 10px 40px rgba(20,40,80,.12)}\n"
-".badge{width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;margin:0 auto 16px}\n"
-".badge svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}\n"
-"h1{font-size:21px;text-align:center;margin:0 0 6px}\n"
-"p.sub{text-align:center;color:var(--mut);margin:0 0 22px;font-size:14.5px}\n"
-"label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:600}\n"
-"input{width:100%;padding:14px 15px;border:1.5px solid var(--line);border-radius:12px;font:inherit;font-size:20px;letter-spacing:.12em;text-align:center;background:#f7f9fd;color:var(--tx)}\n"
-"input:focus{outline:none;border-color:var(--acc)}\n"
-"button{width:100%;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-weight:700;font-size:16px;cursor:pointer;margin-top:16px}\n"
-"button:active{background:var(--acc2)}\n"
-"button:disabled{opacity:.55;cursor:default}\n"
-"button.ghost{background:transparent;color:var(--mut);border:1.5px solid var(--line);font-weight:600}\n"
-".msg{margin-top:14px;padding:11px 14px;border-radius:11px;font-size:14px;text-align:center;display:none}\n"
-".msg.err{display:block;background:#fdecec;color:var(--err)}\n"
-".msg.ok{display:block;background:#e8f7ee;color:var(--ok)}\n"
-".state{text-align:center}\n"
-".state .ic{width:60px;height:60px;border-radius:50%;background:#e8f7ee;display:grid;place-items:center;margin:0 auto 14px}\n"
-".state .ic svg{width:30px;height:30px;stroke:var(--ok);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}\n"
-".foot{text-align:center;color:#8a97ab;font-size:12px;margin-top:22px}\n"
-".foot b{color:#5c6b85}\n"
-".hide{display:none}\n"
-"</style>\n"
-"</head>\n"
-"<body>\n"
-"<div class=\"wrap\">\n"
-"  <div class=\"card\" id=\"card\">\n"
-"    <div class=\"badge\"><svg viewBox=\"0 0 24 24\"><path d=\"M5 12.55a11 11 0 0 1 14.08 0\"/><path d=\"M1.42 9a16 16 0 0 1 21.16 0\"/><path d=\"M8.53 16.11a6 6 0 0 1 6.95 0\"/><path d=\"M12 20h.01\"/></svg></div>\n"
-"    <h1 id=\"ti\">WLAN-Anmeldung</h1>\n"
-"    <p class=\"sub\" id=\"sub\">Lädt…</p>\n"
-"    <div id=\"body\"></div>\n"
-"    <div class=\"msg\" id=\"msg\"></div>\n"
-"  </div>\n"
-"  <div class=\"foot\">Betrieben mit <b>ESP32 Network Toolbox</b></div>\n"
-"</div>\n"
-"<script>\n"
-"\"use strict\";\n"
-"var $ = function(s){ return document.querySelector(s); };\n"
-"var esc = function(s){ return String(s==null?'':s).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c];}); };\n"
-"function msg(t,type){ var m=$('#msg'); m.className='msg '+(type||''); m.textContent=t; }\n"
-"function post(path,data){\n"
-"  return fetch(path,{method:'POST',body:new URLSearchParams(data||{})}).then(function(r){\n"
-"    return r.json().then(function(j){ if(!r.ok||j.ok===false) throw new Error(j.error||'Fehler'); return j; });\n"
-"  });\n"
-"}\n"
-"function showOnline(internet){\n"
-"  $('#sub').textContent = internet ? 'Du bist verbunden.' : 'Angemeldet – warte auf Internet…';\n"
-"  $('#body').innerHTML =\n"
-"    '<div class=\"state\"><div class=\"ic\"><svg viewBox=\"0 0 24 24\"><path d=\"M20 6L9 17l-5-5\"/></svg></div>' +\n"
-"    '<div style=\"color:var(--mut);font-size:14px\">' + (internet ? 'Du kannst jetzt im Internet surfen.' : 'Das WLAN hat aktuell keine Internetverbindung. Bitte kurz warten.') + '</div></div>' +\n"
-"    '<button class=\"ghost\" id=\"bOut\" style=\"margin-top:20px\">Abmelden</button>';\n"
-"  $('#bOut').onclick = function(){ post('/api/guest/logout',{}).then(load).catch(function(){}); };\n"
-"}\n"
-"function showSimple(title){\n"
-"  $('#ti').textContent = esc(title);\n"
-"  $('#sub').textContent = 'Klicke auf „Verbinden“, um ins WLAN zu gelangen.';\n"
-"  $('#body').innerHTML = '<button id=\"bGo\">Verbinden</button>';\n"
-"  $('#bGo').onclick = function(){\n"
-"    $('#bGo').disabled = true; $('#bGo').textContent = 'Verbinde…';\n"
-"    post('/api/guest/accept',{}).then(function(){ msg('Angemeldet.','ok'); setTimeout(load,500); })\n"
-"      .catch(function(e){ msg(e.message,'err'); $('#bGo').disabled=false; $('#bGo').textContent='Verbinden'; });\n"
-"  };\n"
-"}\n"
-"function showTicket(title){\n"
-"  $('#ti').textContent = esc(title);\n"
-"  $('#sub').textContent = 'Bitte gib deinen 6-stelligen Anmeldecode ein.';\n"
-"  $('#body').innerHTML =\n"
-"    '<label for=\"pin\">Anmeldecode</label><input id=\"pin\" inputmode=\"numeric\" pattern=\"[0-9]*\" maxlength=\"6\" placeholder=\"000000\" autocomplete=\"one-time-code\">' +\n"
-"    '<button id=\"bGo\">Anmelden</button>';\n"
-"  var pin = $('#pin');\n"
-"  pin.addEventListener('input', function(){ pin.value = pin.value.replace(/\\D/g,'').slice(0,6); });\n"
-"  pin.addEventListener('keydown', function(ev){ if (ev.key==='Enter') $('#bGo').click(); });\n"
-"  $('#bGo').onclick = function(){\n"
-"    if (pin.value.length !== 6) { msg('Bitte eine 6-stellige PIN eingeben.','err'); return; }\n"
-"    $('#bGo').disabled = true; $('#bGo').textContent = 'Prüfe…';\n"
-"    post('/api/guest/redeem',{pin: pin.value}).then(function(){ msg('Angemeldet.','ok'); setTimeout(load,500); })\n"
-"      .catch(function(e){ msg(e.message,'err'); $('#bGo').disabled=false; $('#bGo').textContent='Anmelden'; pin.focus(); });\n"
-"  };\n"
-"  setTimeout(function(){ pin.focus(); }, 150);\n"
-"}\n"
-"function load(){\n"
-"  msg('','');\n"
-"  fetch('/api/guest/info').then(function(r){ return r.json(); }).then(function(d){\n"
-"    if (d.online) { showOnline(d.internet); return; }\n"
-"    if (d.mode === 2) { showTicket(d.title); return; }\n"
-"    if (d.mode === 1) { showSimple(d.title); return; }\n"
-"    $('#ti').textContent = 'Kein Gäste-Portal aktiv';\n"
-"    $('#sub').textContent = 'Bitte die normale Adresse verwenden.';\n"
-"    $('#body').innerHTML = '';\n"
-"  }).catch(function(){\n"
-"    $('#sub').textContent = 'Verbindung zum ESP32 nicht möglich. Seite neu laden.';\n"
-"  });\n"
-"}\n"
-"load();\n"
 "</script>\n"
 "</body>\n"
 "</html>\n";
