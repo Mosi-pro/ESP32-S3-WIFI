@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#20242b">
+<title>VORSCHAU - WiFi Hotspot (Login-Seite)</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='%232f5d50'/%3E%3Cpath d='M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0' stroke='white' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='12' cy='19' r='1.4' fill='white'/%3E%3C/svg%3E">
+<style>
+:root{--ink:#20242b;--paper:#f3efe6;--card:#fffdf8;--line:#c9c2b4;--mut:#6b6457;--accent:#2f5d50;--accent2:#24473d;--err:#8a2f2f;--ok:#2f5d50}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 -apple-system,"Segoe UI",Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}
+body{min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--ink);color:#f3efe6;padding:16px 20px;display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--accent)}
+header .ic{width:26px;height:26px;fill:none;stroke:#f3efe6;stroke-width:1.8;flex:none}
+header h1{margin:0;font:600 19px/1.2 Georgia,"Times New Roman",serif;letter-spacing:.2px}
+main{flex:1;display:flex;align-items:center;justify-content:center;padding:28px 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:30px 28px;max-width:380px;width:100%;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.card h2{margin:0 0 6px;font:600 20px/1.3 Georgia,"Times New Roman",serif}
+.card p.lead{margin:0 0 20px;color:var(--mut);font-size:14.5px}
+label{display:block;font-size:13px;color:var(--mut);margin:0 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+input[type=password],input[type=text]{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:4px;font-size:16px;background:#fff;color:var(--ink)}
+input:focus{outline:2px solid var(--accent);outline-offset:1px}
+button{width:100%;margin-top:16px;padding:12px;border:1px solid var(--accent2);border-radius:4px;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+button:hover{background:var(--accent2)}
+button:disabled{opacity:.6;cursor:default}
+.err{margin-top:12px;padding:10px 12px;border:1px solid var(--err);border-radius:4px;background:#f6e9e9;color:var(--err);font-size:13.5px;display:none}
+.ok-box{text-align:center}
+.ok-box .mark{width:52px;height:52px;border-radius:50%;background:var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.ok-box .mark svg{width:28px;height:28px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.ok-box p{color:var(--mut);font-size:14px;margin:4px 0 0}
+.linklike{background:none;border:none;color:var(--accent2);text-decoration:underline;font-size:13px;margin-top:14px;padding:0;width:auto;font-weight:600}
+.linklike:hover{background:none;color:var(--ink)}
+footer{padding:14px 16px;text-align:center;color:var(--mut);font-size:12px}
+.hidden{display:none !important}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+<svg class="ic" viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1.2" fill="#f3efe6" stroke="none"/></svg>
+<h1>WiFi Hotspot</h1>
+</header>
+<main>
+<div class="card" id="box">
+<div class="empty">Lade...</div>
+</div>
+</main>
+<footer>Eigenständiges Gerät &middot; kein offizieller Netzbetreiber-Dienst</footer>
+<script>
+// ===== VORSCHAU-MODUS (Login-Seite): simuliert den ESP32 im Browser =====
+(function () {
+  const S = { accessPass: 'hotspot123', online: false, internet: true };
+  const R = (status, body) => ({ status, body });
+  function handle(method, p, a) {
+    switch (p) {
+      case '/api/access/info': return R(200, { title: 'WiFi Hotspot', online: S.online, internet: S.internet });
+      case '/api/access/login':
+        if (a.get('pass') === S.accessPass) { S.online = true; return R(200, { ok: true }); }
+        return R(401, { ok: false, error: 'Falsches Zugangspasswort' });
+      case '/api/access/logout': S.online = false; return R(200, { ok: true });
+      default: return R(404, { ok: false, error: 'Unbekannter Endpunkt' });
+    }
+  }
+  const BASE = 'http://esp32.vorschau/';
+  const realFetch = window.fetch.bind(window);
+  window.fetch = async (url, opts) => {
+    opts = opts || {};
+    const u = new URL(url, BASE);
+    if (!u.pathname.startsWith('/api/')) return realFetch(url, opts);
+    const method = (opts.method || 'GET').toUpperCase();
+    const a = new URLSearchParams(opts.body || '');
+    const r = handle(method, u.pathname, a);
+    return new Response(JSON.stringify(r.body), { status: r.status, headers: { 'Content-Type': 'application/json' } });
+  };
+})();
+
+</script>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function renderForm(title){
+  $('#box').innerHTML =
+    '<h2>Zugang zum WLAN</h2>'+
+    '<p class="lead">'+escapeHtml(title)+' verlangt ein Zugangspasswort, bevor Internet freigegeben wird.</p>'+
+    '<form id="f"><label for="p">Zugangspasswort</label><input id="p" type="password" autocomplete="current-password" autofocus>'+
+    '<div class="err" id="e"></div>'+
+    '<button type="submit" id="go">Zugang freischalten</button></form>';
+  $('#f').addEventListener('submit', async ev=>{
+    ev.preventDefault();
+    const btn=$('#go'); const e=$('#e');
+    e.style.display='none';
+    btn.disabled=true; btn.innerHTML='<span class="spin"></span>Prüfe...';
+    try{
+      const r=await fetch('/api/access/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'pass='+encodeURIComponent($('#p').value)});
+      const d=await r.json().catch(()=>({}));
+      if(r.ok && d.ok){ load(); }
+      else { e.textContent=d.error||'Anmeldung fehlgeschlagen'; e.style.display='block'; btn.disabled=false; btn.textContent='Zugang freischalten'; }
+    }catch(err){ e.textContent='Verbindung fehlgeschlagen'; e.style.display='block'; btn.disabled=false; btn.textContent='Zugang freischalten'; }
+  });
+}
+function renderOk(internet){
+  $('#box').innerHTML =
+    '<div class="ok-box"><div class="mark"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>'+
+    '<h2>Verbunden</h2>'+
+    '<p>'+(internet?'Internetzugang ist aktiv.':'Angemeldet - das wiederholte WLAN ist momentan nicht erreichbar, bitte kurz warten.')+'</p>'+
+    '<button class="linklike" id="out" type="button">Abmelden</button></div>';
+  $('#out').addEventListener('click', async ()=>{
+    await fetch('/api/access/logout',{method:'POST'}).catch(()=>{});
+    load();
+  });
+}
+async function load(){
+  try{
+    const r=await fetch('/api/access/info');
+    const d=await r.json();
+    if(d.online) renderOk(d.internet);
+    else renderForm(d.title||'WiFi Hotspot');
+  }catch(e){
+    renderForm('WiFi Hotspot');
+  }
+}
+load();
+</script>
+</body>
+</html>
