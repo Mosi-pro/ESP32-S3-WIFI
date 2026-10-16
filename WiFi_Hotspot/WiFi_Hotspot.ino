@@ -583,6 +583,13 @@ static bool routableNow() {
   return g_staState == STA_CONNECTED;
 }
 
+// Wichtig: Der DNS-Server, den der eigene Access Point per DHCP an Geraete
+// verteilt, bleibt IMMER die eigene IP-Adresse (Standardverhalten von
+// WiFi.softAP()) - Geraete fragen also immer unseren eigenen dnsTask() und
+// NIE direkt den echten Upstream-DNS-Server. So laeuft die Namensaufloesung
+// ueber unseren eigenen, zuverlaessigen Relay (dnsForward(), eine normale
+// Anfrage des ESP32 selbst) statt ueber NAT/NAPT fuer UDP-Pakete - NAPT
+// wird dadurch nur fuer die eigentlichen Verbindungen (TCP/HTTPS) benoetigt.
 static void applyRouterMode(bool on) {
   esp_netif_t *apNif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
   esp_netif_t *staNif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
@@ -591,8 +598,6 @@ static void applyRouterMode(bool on) {
     if (staNif) esp_netif_set_default_netif(staNif);
     if (esp_netif_napt_enable(apNif) == ESP_OK) {
       g_routerActive = true;
-      IPAddress dns = WiFi.dnsIP();
-      if ((uint32_t)dns != 0) WiFi.softAPConfig(WiFi.softAPIP(), WiFi.softAPIP(), IPAddress(255, 255, 255, 0), IPAddress((uint32_t)0), dns);
       addLog(0, "Internet von '%s' wird geteilt", g_known[g_knownTryIdx].ssid);
     } else {
       addLog(2, "Internet teilen fehlgeschlagen (NAPT)");
@@ -600,7 +605,6 @@ static void applyRouterMode(bool on) {
   } else {
     if (g_routerActive) esp_netif_napt_disable(apNif);
     g_routerActive = false;
-    WiFi.softAPConfig(WiFi.softAPIP(), WiFi.softAPIP(), IPAddress(255, 255, 255, 0));
   }
 }
 
@@ -638,10 +642,11 @@ static void dnsSendA(WiFiUDP &udp, const uint8_t *req, int len, IPAddress answer
 }
 
 // Reicht eine DNS-Anfrage unveraendert an den echten DNS-Server weiter und
-// schickt die Antwort an den urspruenglichen Absender zurueck.
-static void dnsForward(WiFiUDP &udp, const uint8_t *req, int len, IPAddress upstream, IPAddress dst, uint16_t dstPort) {
+// schickt die Antwort an den urspruenglichen Absender zurueck. Liefert true,
+// wenn eine Antwort kam (und damit an den Client weitergeschickt wurde).
+static bool dnsForward(WiFiUDP &udp, const uint8_t *req, int len, IPAddress upstream, IPAddress dst, uint16_t dstPort) {
   WiFiUDP fwd;
-  if (!fwd.begin(0)) return;
+  if (!fwd.begin(0)) return false;
   fwd.beginPacket(upstream, 53);
   fwd.write(req, len);
   fwd.endPacket();
@@ -652,6 +657,7 @@ static void dnsForward(WiFiUDP &udp, const uint8_t *req, int len, IPAddress upst
     if (rl > 0) break;
     delay(5);
   }
+  bool ok = false;
   if (rl > 0 && rl <= 512) {
     uint8_t rbuf[512];
     int n = fwd.read(rbuf, rl);
@@ -659,9 +665,11 @@ static void dnsForward(WiFiUDP &udp, const uint8_t *req, int len, IPAddress upst
       udp.beginPacket(dst, dstPort);
       udp.write(rbuf, n);
       udp.endPacket();
+      ok = true;
     }
   }
   fwd.stop();
+  return ok;
 }
 
 static void dnsTask(void *arg) {
@@ -671,6 +679,10 @@ static void dnsTask(void *arg) {
     vTaskDelete(NULL);
     return;
   }
+  // Fallback, falls das Upstream-WLAN per DHCP keinen (oder einen nicht
+  // erreichbaren) DNS-Server mitteilt - sonst wuerden Namen nie aufgeloest,
+  // obwohl die eigentliche Internetverbindung (NAT) funktioniert.
+  const IPAddress FALLBACK_DNS(1, 1, 1, 1);
   uint8_t buf[512];
   for (;;) {
     int len = udp.parsePacket();
@@ -682,7 +694,9 @@ static void dnsTask(void *arg) {
       if (n > 0) {
         bool allowed = routableNow() && isAccessAuthorized((uint32_t)src);
         if (allowed) {
-          dnsForward(udp, buf, n, WiFi.dnsIP(), src, sport);
+          IPAddress up = WiFi.dnsIP();
+          bool done = ((uint32_t)up != 0) && dnsForward(udp, buf, n, up, src, sport);
+          if (!done) dnsForward(udp, buf, n, FALLBACK_DNS, src, sport);
         } else {
           dnsSendA(udp, buf, n, WiFi.softAPIP(), src, sport);
         }

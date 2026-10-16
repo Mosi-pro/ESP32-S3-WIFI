@@ -79,7 +79,7 @@ Nach dem Upload kannst du im Seriellen Monitor (115200 Baud) die Start-Meldungen
 | **Verwaltung öffnet sich nicht** | Mit `WiFi Hotspot` verbunden? Adresse **`http://`** (nicht https) `192.168.4.1/admin` von Hand eintippen. VPN/„Private DNS“ ausschalten. |
 | **PSRAM-Fehler** („PSRAM ID read error“, Absturz beim Start) | *PSRAM = OPI PSRAM*. |
 | **Flash-/Partition-Fehler** | *Partition Scheme = 16M Flash (3MB APP/9.9MB FATFS)* und *Flash Size = 16MB*. |
-| **Kein Internet am Hotspot** | Unter „Status“ in der Verwaltung prüfen, ob ein bekanntes WLAN gerade erreichbar ist. Ist keines in der Nähe, zeigt der Status „Suche WLAN…“ - Internet gibt es erst, wenn eines gefunden wird. |
+| **Kein Internet am Hotspot** | Unter „Status“ in der Verwaltung prüfen, ob ein bekanntes WLAN gerade erreichbar ist. Ist keines in der Nähe, zeigt der Status „Suche WLAN…“ - Internet gibt es erst, wenn eines gefunden wird. **Status zeigt „Verbunden“/„Aktiv“, aber Webseiten laden trotzdem nicht:** meist ein DNS-Problem (Namen wie „google.de“ lösen sich nicht auf) - zum Prüfen eine nackte IP-Adresse öffnen, z. B. `http://1.1.1.1`. Lädt das, aber normale Adressen nicht: mit der aktuellen Firmware behoben (eigener DNS-Relay mit Fallback auf `1.1.1.1`, falls das Upstream-WLAN keinen brauchbaren DNS-Server mitteilt) - ggf. die neueste `.ino` erneut hochladen. |
 | **Zugangspasswort vergessen** | In der Verwaltung unter „Zugangspasswort“ ein neues setzen (Admin-Login nötig). |
 | **Admin-Login/alles vergessen** | *Verwaltung → System → Werkseinstellungen* (setzt auch das Zugangspasswort und alle bekannten WLANs zurück). |
 
